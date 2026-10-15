@@ -1,0 +1,557 @@
+<% extends "base_template.tex" %>
+
+<% block body %>
+
+\thispagestyle{plain}
+\begin{center}
+  {\sffamily\bfseries\huge\color{WgsBlue} 肠道菌群健康评估报告} \\[0.6em]
+  {\color{graytext}\small 样本编号：<{ sample_id }> \quad|\quad 生成时间：<{ report_date }>}
+\end{center}
+
+\begin{resultbox}{微生态综合健康评分}
+  {\sffamily\bfseries\fontsize{34pt}{38pt}\selectfont\color{WgsBlue} <{ overall_score }>} \, {\large\color{graytext}/ 100} \\[0.5em]
+  {\bfseries\color{darkgray} <{ rating }>}
+\end{resultbox}
+
+\begin{infobox}{核心摘要}
+已检测物种数：\textbf{<{ n_total }> }；正常：\textbf{<{ n_normal }> }；偏高：\textbf{<{ n_high }> }；偏低：\textbf{<{ n_low }> }。
+菌群结构评分为 \textbf{<{ dim_species }>}，疾病风险维度评分为 \textbf{<{ dim_disease }>}，药物交互维度评分为 \textbf{<{ dim_drug }>}。
+\end{infobox}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+<% if enterotype %>
+\section{肠型分类分析}
+\begin{infobox}{肠型定位}
+当前肠型：\textbf{<{ enterotype.enterotype }>}；置信度：\textbf{<{ enterotype.confidence }>\%}。
+<% if enterotype.description %>
+
+<{ enterotype.description }>
+<% endif %>
+<% if enterotype_silhouette %>
+
+肠型聚类轮廓系数（Silhouette Score）：\textbf{<{ enterotype_silhouette }> }。
+<% endif %>
+\end{infobox}
+
+<% if enterotype_distribution %>
+\subsection{肠型分布}
+{\footnotesize
+\begin{tabularx}{\textwidth}{L{0.38\textwidth} C{0.18\textwidth} Y}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{肠型} & \textbf{样本数} & \textbf{占比} \\
+\midrule
+<% for row in enterotype_distribution %>
+<{ row.label }> & <{ row.count }> & <{ row.percent }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\bottomrule
+\end{tabularx}
+}
+<% endif %>
+
+<% if enterotype_marker_basis or enterotype_top_genus %>
+\subsection{分类依据}
+<% if enterotype_marker_basis %>
+{\TableFont
+\begin{tabularx}{\textwidth}{L{0.58\textwidth} C{0.24\textwidth}}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{标志性菌属组合} & \textbf{相对占比(\%)} \\
+\midrule
+<% for row in enterotype_marker_basis %>
+<{ row.marker }> & <{ row.ratio }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\bottomrule
+\end{tabularx}
+}
+<% endif %>
+
+<% if enterotype_top_genus %>
+{\TableFont
+\begin{tabularx}{\textwidth}{L{0.58\textwidth} C{0.24\textwidth}}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{丰度靠前菌属} & \textbf{丰度(\%)} \\
+\midrule
+<% for row in enterotype_top_genus %>
+<{ row.genus }> & <{ row.abundance }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\bottomrule
+\end{tabularx}
+}
+<% endif %>
+<% endif %>
+
+<% if enterotype_cluster_plot %>
+\subsection{t-SNE 聚类可视化}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{\detokenize{<{ enterotype_cluster_plot }>}}
+  \caption{基于菌属丰度的肠型 t-SNE 聚类图，当前样本已单独高亮标注}
+\end{figure}
+<% if enterotype_plot_interpretation %>
+\begin{infobox}{图形解读}
+<{ enterotype_plot_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+<% if enterotype_relation_summary %>
+\begin{recommendbox}{肠型结果解读}
+<{ enterotype_relation_summary }>
+\end{recommendbox}
+<% endif %>
+<% if enterotype_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ enterotype_patient_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+<% if abnormal_species or normal_top_species or beneficial_species or harmful_species %>
+\section{肠道菌群组成分析}
+以下内容按有益菌与有害菌分层展示丰度、参考范围与说明；所有表格均使用固定列宽和自动换行，避免文字重叠。
+
+<% if abnormal_species %>
+\subsection{异常物种详情}
+{\DenseTableFont
+\begin{xltabular}{\textwidth}{P{0.24\textwidth} P{0.12\textwidth} C{0.10\textwidth} C{0.10\textwidth} C{0.10\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{状态} & \textbf{偏差} & \textbf{健康解读} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{状态} & \textbf{偏差} & \textbf{健康解读} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in abnormal_species %>
+<{ row.species }> & <{ row.chinese_name }> & <{ row.abundance }> & <{ row.status }> & <{ row.deviation }> & <{ row.summary }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% endif %>
+
+<% if normal_top_species %>
+\subsection{正常范围内 Top 10 物种}
+{\TableFont
+\begin{xltabular}{\textwidth}{P{0.36\textwidth} P{0.18\textwidth} C{0.14\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{参考范围 P5-P95} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{参考范围 P5-P95} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in normal_top_species %>
+<{ row.species }> & <{ row.chinese_name }> & <{ row.abundance }> & <{ row.ref_range }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% endif %>
+
+<% if beneficial_species %>
+\subsection{有益菌}
+{\TableFont
+\begin{xltabular}{\textwidth}{P{0.26\textwidth} P{0.15\textwidth} C{0.12\textwidth} C{0.17\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{参考范围} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{参考范围} & \textbf{说明} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in beneficial_species %>
+<{ row.species }> & <{ row.chinese_name }> & <{ row.abundance }> & <{ row.ref_range }> & <{ row.summary }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% endif %>
+
+<% if harmful_species %>
+\subsection{有害菌}
+{\TableFont
+\begin{xltabular}{\textwidth}{P{0.26\textwidth} P{0.15\textwidth} C{0.12\textwidth} C{0.17\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{参考范围} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{物种名称} & \textbf{中文名} & \textbf{丰度(\%)} & \textbf{参考范围} & \textbf{说明} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in harmful_species %>
+<{ row.species }> & <{ row.chinese_name }> & <{ row.abundance }> & <{ row.ref_range }> & <{ row.summary }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% endif %>
+<% if species_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ species_patient_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+<% if pathway_data %>
+\section{代谢通路活性分析}
+共检测到 \textbf{<{ pathway_count }>} 条代谢通路，以下展示重点通路：
+
+{\TableFont
+\begin{xltabular}{\textwidth}{P{0.42\textwidth} C{0.14\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{通路名称} & \textbf{丰度} & \textbf{生物学提示} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{通路名称} & \textbf{丰度} & \textbf{生物学提示} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in pathway_data %>
+<{ row.name }> & <{ row.abundance }> & <{ row.implication }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% if pathway_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ pathway_patient_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+<% if metabolite_data %>
+\section{代谢物含量分析}
+共检测到 \textbf{<{ metabolite_count }>} 项代谢物，以下列出重点项目：
+
+{\TableFont
+\begin{xltabular}{\textwidth}{P{0.43\textwidth} C{0.16\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{代谢物} & \textbf{丰度} & \textbf{参考范围} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{代谢物} & \textbf{丰度} & \textbf{参考范围} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in metabolite_data %>
+<{ row.name }> & <{ row.abundance }> & <{ row.ref_range }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% if metabolite_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ metabolite_patient_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+<% if drug_data %>
+\section{药物-微生物组交互分析}
+共分析 \textbf{<{ drug_count }>} 项药物交互，较高风险项 \textbf{<{ high_risk_count }>} 个。
+
+<% if high_risk_drugs %>
+\subsection{高风险药物}
+{\TableFont
+\begin{tabularx}{\textwidth}{P{0.74\textwidth} C{0.18\textwidth}}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{药物名称} & \textbf{风险评分} \\
+\midrule
+<% for row in high_risk_drugs %>
+<{ row.drug }> & <{ row.score }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\bottomrule
+\end{tabularx}
+}
+<% endif %>
+
+<% if all_drugs %>
+\subsection{药物明细}
+{\DenseTableFont
+\begin{xltabular}{\textwidth}{P{0.60\textwidth} C{0.13\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{药物名称} & \textbf{评分} & \textbf{风险等级} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{药物名称} & \textbf{评分} & \textbf{风险等级} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in all_drugs %>
+<{ row.drug }> & <{ row.score }> & <{ row.risk_level }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% endif %>
+
+<% if drug_advice %>
+\begin{recommendbox}{用药建议}
+\begin{itemize}
+<% for item in drug_advice %>
+  \item <{ item }>
+<% endfor %>
+\end{itemize}
+\end{recommendbox}
+<% endif %>
+<% if drug_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ drug_patient_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+<% if high_risk_diseases or mid_risk_diseases or low_risk_diseases or disease_empty_message %>
+\section{肠道菌群-疾病关联分析}
+
+<% if high_risk_diseases %>
+\subsection{高风险疾病}
+{\DenseTableFont
+\begin{xltabular}{\textwidth}{P{0.24\textwidth} C{0.11\textwidth} C{0.12\textwidth} C{0.12\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{疾病} & \textbf{评分} & \textbf{匹配物种} & \textbf{方向一致} & \textbf{关键物种} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{疾病} & \textbf{评分} & \textbf{匹配物种} & \textbf{方向一致} & \textbf{关键物种} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in high_risk_diseases %>
+<{ row.disease }> & <{ row.risk_score }> & <{ row.matched_species }> & <{ row.agree_count }> & <{ row.key_species }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% endif %>
+
+<% if mid_risk_diseases %>
+\subsection{中风险疾病}
+{\TableFont
+\begin{tabularx}{\textwidth}{P{0.45\textwidth} C{0.12\textwidth} C{0.17\textwidth} Y}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{疾病} & \textbf{评分} & \textbf{匹配物种} & \textbf{方向一致} \\
+\midrule
+<% for row in mid_risk_diseases %>
+<{ row.disease }> & <{ row.risk_score }> & <{ row.matched_species }> & <{ row.agree_count }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\bottomrule
+\end{tabularx}
+}
+<% endif %>
+
+<% if low_risk_diseases %>
+\subsection{低风险疾病}
+{\TableFont
+\begin{tabularx}{\textwidth}{P{0.45\textwidth} C{0.12\textwidth} C{0.17\textwidth} Y}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{疾病} & \textbf{评分} & \textbf{匹配物种} & \textbf{方向一致} \\
+\midrule
+<% for row in low_risk_diseases %>
+<{ row.disease }> & <{ row.risk_score }> & <{ row.matched_species }> & <{ row.agree_count }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\bottomrule
+\end{tabularx}
+}
+<% endif %>
+
+<% if disease_empty_message %>
+\begin{infobox}{疾病关联状态}
+<{ disease_empty_message }>
+\end{infobox}
+<% endif %>
+
+\begin{infobox}{风险评分说明}
+<{ disease_risk_note }>
+
+<{ disease_disclaimer }>
+\end{infobox}
+<% if disease_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ disease_patient_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+\section{综合健康评估与建议}
+\begin{resultbox}{综合健康评分}
+  {\sffamily\bfseries\fontsize{26pt}{30pt}\selectfont\color{WgsBlue} <{ overall_score }>} \, {\large\color{graytext}/ 100} \\[0.4em]
+  {\bfseries\color{darkgray} <{ rating }>}
+\end{resultbox}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{L{0.26\textwidth} C{0.14\textwidth} Y}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{维度} & \textbf{评分} & \textbf{说明} \\
+\midrule
+物种健康度 & <{ dim_species }> & 健康参考范围内物种占比越高，得分越高。 \\
+\rowcolor{rowgray}
+菌群稳定性 & <{ dim_stability }> & 异常物种越少，菌群结构越稳定。 \\
+疾病防御力 & <{ dim_disease }> & 基于疾病关联风险的综合扣分结果。 \\
+\rowcolor{rowgray}
+药物耐受度 & <{ dim_drug }> & 药物与菌群潜在交互干扰越低，得分越高。 \\
+\bottomrule
+\end{tabularx}
+}
+<% if overall_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ overall_patient_interpretation }>
+\end{infobox}
+<% endif %>
+
+<% if fmt_ok or fmt_degraded or fmt_unavailable %>
+\subsection{FMT 配型预测}
+<% if fmt_ok %>
+\begin{recommendbox}{FMT 候选供体}
+<{ fmt_message }>
+
+<{ fmt_best_comment }>
+\end{recommendbox}
+
+<% if fmt_matches %>
+{\TableFont
+\begin{xltabular}{\textwidth}{C{0.07\textwidth} P{0.22\textwidth} C{0.13\textwidth} C{0.13\textwidth} C{0.11\textwidth} Z}
+\toprule
+\rowcolor{WgsBlue!12}
+\textbf{排名} & \textbf{供体 ID} & \textbf{相对分} & \textbf{距离} & \textbf{病例} & \textbf{响应率} \\
+\midrule
+\endfirsthead
+\rowcolor{WgsBlue!12}
+\textbf{排名} & \textbf{供体 ID} & \textbf{相对分} & \textbf{距离} & \textbf{病例} & \textbf{响应率} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{\footnotesize\color{graytext} 续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+<% for row in fmt_matches %>
+<{ row.rank }> & <{ row.donor_id }> & <{ row.score }> & <{ row.distance }> & <{ row.cases }> & <{ row.response_rate }> \\
+<% if not loop.last %>\rowcolor{rowgray}<% endif %>
+<% endfor %>
+\end{xltabular}
+}
+<% endif %>
+<% if fmt_quality_note %>
+\begin{infobox}{模型输入质量}
+<{ fmt_quality_note }>
+\end{infobox}
+<% endif %>
+<% if fmt_tsne_plot %>
+\subsection{FMT 配型嵌入可视化}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{\detokenize{<{ fmt_tsne_plot }>}}
+  \caption{基于三元组模型嵌入空间的 FMT 候选供体投影图}
+\end{figure}
+<% if fmt_plot_interpretation %>
+\begin{infobox}{图形解读}
+<{ fmt_plot_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+<% elif fmt_degraded %>
+\begin{warnbox}{FMT 配型状态}
+<{ fmt_message }>
+\end{warnbox}
+<% elif fmt_unavailable %>
+\begin{warnbox}{FMT 配型状态}
+<{ fmt_message }>
+\end{warnbox}
+<% endif %>
+\begin{infobox}{FMT 配型说明}
+<{ fmt_explanation }>
+\end{infobox}
+<% if fmt_patient_interpretation %>
+\begin{infobox}{患者解读}
+<{ fmt_patient_interpretation }>
+\end{infobox}
+<% endif %>
+<% endif %>
+
+<% if llm_advice %>
+\begin{recommendbox}{个体化建议}
+<{ llm_advice }>
+\end{recommendbox}
+<% endif %>
+
+\section{参考资料}
+<% if references %>
+\begin{enumerate}
+<% for ref in references %>
+  \item <{ ref }>
+<% endfor %>
+\end{enumerate}
+<% else %>
+\begin{infobox}{参考资料状态}
+<{ references_empty_message }>
+\end{infobox}
+<% endif %>
+
+<% endblock %>

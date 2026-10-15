@@ -1,0 +1,210 @@
+\documentclass[
+  11pt,
+  a4paper,
+  UTF8,
+  headings=small,
+  toc=listof,        % 目录含图表索引
+  toc=bib,           % 目录含参考文献
+]{ctexart}
+
+% ── 编码与字体 ──
+\usepackage{fontspec}
+% 通过 fontconfig 查找字体，避免依赖旧服务器的硬编码用户目录。
+\setmainfont{Noto Sans CJK SC}
+\setsansfont{Noto Sans CJK SC}
+\setmonofont{Noto Sans Mono CJK SC}
+
+% ── 页面布局 ──
+\usepackage[
+  a4paper,
+  left=22mm,
+  right=22mm,
+  top=25mm,
+  bottom=25mm,
+  headheight=14pt,
+  headsep=8mm,
+  footskip=12mm,
+]{geometry}
+
+% ── 颜色定义 ──
+\usepackage[dvipsnames,svgnames,table]{xcolor}
+\definecolor{WgsBlue}{RGB}{25, 60, 120}
+\definecolor{WgsLightBlue}{RGB}{50, 90, 150}
+\definecolor{WgsAccent}{RGB}{0, 130, 200}
+\definecolor{WgsGreen}{RGB}{0, 140, 60}
+\definecolor{WgsWarn}{RGB}{200, 130, 0}
+\definecolor{WgsDanger}{RGB}{200, 50, 50}
+\definecolor{graytext}{RGB}{100, 100, 100}
+\definecolor{lightgraytext}{RGB}{150, 150, 150}
+\definecolor{darkgray}{RGB}{45, 45, 45}
+\definecolor{rowgray}{RGB}{243, 247, 252}
+\colorlet{WgsBg}{WgsBlue!8!white}
+
+% ── 表格 ──
+\usepackage{ragged2e}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{colortbl}
+\usepackage{makecell}
+\usepackage{ltablex}
+\usepackage{xltabular}
+
+% 长表格/自适应列宽稳定性
+\keepXColumns
+\renewcommand\arraystretch{1.24}
+\setlength{\extrarowheight}{2pt}
+\setlength{\tabcolsep}{4pt}
+
+% 自定义列类型：左对齐自动换行列 / 居中定宽列
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{C}[1]{>{\Centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{P}[1]{>{\RaggedRight\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{Z}{>{\RaggedRight\arraybackslash\hspace{0pt}}X}
+\newcommand{\TableFont}{\fontsize{8.6pt}{11.2pt}\selectfont}
+\newcommand{\DenseTableFont}{\fontsize{8.2pt}{10.8pt}\selectfont}
+
+% ── 图形 ──
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{grffile}
+
+% ── 其他包 ──
+\usepackage[colorlinks=true,
+  linkcolor=WgsBlue,
+  urlcolor=WgsAccent,
+  citecolor=WgsBlue,
+  bookmarks=true,
+  bookmarksopen=true,
+  pdfpagemode=UseOutlines,
+  pdftitle={肠道菌群健康评估报告},
+  pdfauthor={WGS.FMT Pipeline},
+  pdfsubject={Gut Microbiome Health Assessment},
+  pdfcreator={xelatex + WGS.FMT Agent},
+]{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage[bottom]{footmisc}
+\usepackage{microtype}
+
+% ── 列表样式 ──
+\setlist{nosep, leftmargin=*, itemsep=4pt, parsep=0pt}
+
+% ── 页眉页脚 ──
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{graytext} 肠道菌群健康评估报告}
+\fancyhead[R]{\small\color{graytext} \leftmark}
+\fancyfoot[C]{\small\color{graytext} —\ \thepage\ —}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{WgsBlue!40}\leaders\hrule height \headrulewidth\hfill}}
+\renewcommand{\footrulewidth}{0pt}
+
+% 重新定义 plain 样式，确保报告首页（如封面）干净无页眉
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\small\color{graytext} —\ \thepage\ —}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+% ── 章节标题样式 ──
+\usepackage{titlesec}
+\titleformat{\section}
+  {\sffamily\bfseries\Large\color{WgsBlue}}
+  {\thesection}{1em}{}
+\titleformat{\subsection}
+  {\sffamily\bfseries\large\color{WgsLightBlue}}
+  {\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\sffamily\bfseries\normalsize\color{darkgray}}
+  {\thesubsubsection}{1em}{}
+
+\setcounter{tocdepth}{2}
+\renewcommand{\contentsname}{目录}
+
+% ── 自定义环境 ──
+\usepackage[many]{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+% 通用框参数微调，增加内部留白 (toptitle, bottomtitle, boxsep)
+\tcbset{
+  reportbox/.style={
+    enhanced, breakable, sharp corners,
+    before skip=12pt, after skip=14pt,
+    top=4mm, bottom=4mm, left=4mm, right=4mm,
+    boxsep=1pt, toptitle=2mm, bottomtitle=2mm
+  }
+}
+
+% 信息框（浅蓝背景）
+\newtcolorbox{infobox}[1]{
+  reportbox,
+  colback=WgsBg,
+  colframe=WgsBlue!30,
+  coltitle=white,
+  fonttitle=\sffamily\bfseries,
+  title={【信息】\ \ #1},
+  attach boxed title to top left={xshift=3mm,yshift=-3mm},
+  boxed title style={colback=WgsBlue, sharp corners}
+}
+
+% 推荐/建议框（浅绿背景）
+\newtcolorbox{recommendbox}[1]{
+  reportbox,
+  colback=WgsGreen!6!white,
+  colframe=WgsGreen!30,
+  coltitle=white,
+  fonttitle=\sffamily\bfseries,
+  title={【建议】\ \ #1},
+  attach boxed title to top left={xshift=3mm,yshift=-3mm},
+  boxed title style={colback=WgsGreen, sharp corners}
+}
+
+% 结果综合看板框（大号分数专用）
+\newtcolorbox{resultbox}[1]{
+  reportbox,
+  colback=WgsBlue!4!white,
+  colframe=WgsBlue!40,
+  coltitle=white,
+  center title,
+  fonttitle=\sffamily\bfseries\large,
+  title={#1},
+  halign=center
+}
+
+% 警告框（浅橙背景）
+\newtcolorbox{warnbox}[1]{
+  reportbox,
+  colback=WgsWarn!5!white,
+  colframe=WgsWarn!25,
+  coltitle=white,
+  fonttitle=\sffamily\bfseries,
+  title={【警告】\ \ #1},
+  attach boxed title to top left={xshift=3mm,yshift=-3mm},
+  boxed title style={colback=WgsWarn, sharp corners}
+}
+
+% 避免长表格标题与内容挤压、提升分页稳定性
+\setlength{\LTpre}{0.5em}
+\setlength{\LTpost}{0.5em}
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\LTcapwidth}{\textwidth}
+
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+\emergencystretch=3em
+\linespread{1.15} % 稍微放开行距，提高报告可读性
+\sloppy
+
+\begin{document}
+
+<% block body %>
+% 子模板内容锚点
+<% endblock %>
+
+\end{document}

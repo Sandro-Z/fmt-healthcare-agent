@@ -1,0 +1,35 @@
+{
+  "name": "fmt-ranking-fixed-evaluation",
+  "version": "eval-2026.07-v1",
+  "task": "fmt_donor_ranking",
+  "feature_version": "feature-schema-v1",
+  "knowledge_version": "kg-2026.07",
+  "label_definition": "Clinically reviewed compatible donor IDs",
+  "samples": [
+    {
+      "sample_id": "TRAIN-001",
+      "subject_id": "SUBJECT-001",
+      "center_id": "CENTER-A",
+      "collection_date": "2025-01-10",
+      "split": "train",
+      "labels": {"compatible_donor": "DONOR-001"}
+    },
+    {
+      "sample_id": "VALID-001",
+      "subject_id": "SUBJECT-101",
+      "center_id": "CENTER-B",
+      "collection_date": "2025-09-12",
+      "split": "validation",
+      "labels": {"compatible_donor": "DONOR-012"}
+    },
+    {
+      "sample_id": "TEST-001",
+      "subject_id": "SUBJECT-201",
+      "center_id": "CENTER-C",
+      "collection_date": "2026-03-21",
+      "split": "test",
+      "labels": {"compatible_donor": "DONOR-031"}
+    }
+  ]
+}
+

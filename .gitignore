@@ -1,0 +1,39 @@
+.env
+.env.*
+!.env.example
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
+.DS_Store
+var/
+dist/
+build/
+apps/workspace-web/.next/
+apps/workspace-web/node_modules/
+apps/workspace-web/npm-debug.log*
+apps/workspace-web/*.log
+apps/workspace-web/*.pid
+apps/workspace-web/*.exit
+apps/workspace-web/tsconfig.tsbuildinfo
+
+# Runtime state and potentially sensitive research artifacts.
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.jsonl
+*.log
+*.pid
+
+# Generated/downloaded knowledge assets.
+knowledge_base/faiss_index/
+knowledge_base/documents/papers/
+
+# Microsoft YaHei binaries are local runtime assets and are not redistributable.
+src/wgs_agent/tools/fonts/*.TTC

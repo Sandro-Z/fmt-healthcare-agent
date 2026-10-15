@@ -1,0 +1,30 @@
+{
+  "request": {
+    "sample": {
+      "sample_id": "FIXED-001",
+      "read1": "FIXED-001_1.fastq.gz",
+      "sample_type": "feces"
+    },
+    "database_id": "human-gut-db",
+    "database_version": "db-fixed-v1",
+    "knowledge_version": "kg-fixed-v1",
+    "model_version": "model-fixed-v1"
+  },
+  "status": "succeeded",
+  "features": [
+    {
+      "feature_id": "NCBITaxon:853",
+      "feature_name": "Faecalibacterium prausnitzii",
+      "feature_type": "microbe",
+      "value": 0.42,
+      "unit": "relative_abundance_percent",
+      "status": "low",
+      "deviation_score": -2.8,
+      "provenance": {
+        "source": "fixed-regression-fixture",
+        "source_version": "db-fixed-v1"
+      }
+    }
+  ]
+}
+
