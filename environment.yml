@@ -1,0 +1,14 @@
+name: wgs-fmt-agent-v2
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.12
+  - pip>=24
+  - nodejs=22
+  - pandoc>=3
+  - pip:
+      # Install the application and the production infrastructure,
+      # reporting/analysis, and FMT model dependency groups.
+      - "-e .[infra,legacy,fmt]"
