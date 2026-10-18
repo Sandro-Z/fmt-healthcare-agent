@@ -45,7 +45,8 @@ PyTorch，再执行其余安装，避免安装不匹配的 GPU wheel。
 
 ```bash
 uv lock
-uv export --frozen --all-extras --no-hashes --format requirements-txt \
+uv export --frozen --all-extras --no-hashes --no-annotate --no-header \
+  --format requirements-txt \
   --output-file requirements.txt
 ```
 
