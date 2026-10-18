@@ -4,6 +4,9 @@
 配型、知识检索、报告生成和 Agent 工具保留为共享 Python 包。旧 Streamlit 界面和旧 8000
 端口 API 已从活动源码移除。
 
+第一次接触本项目，请先阅读 `docs/PROJECT_ARCHITECTURE_GUIDE.md`，其中包含整体调用链、
+常用依赖、模块对应关系、数据存储方式和完整安装启动流程。
+
 ## 目录结构
 
 ```text
