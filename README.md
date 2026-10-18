@@ -37,7 +37,8 @@ Git 仓库仅保存源码、测试、文档和配置模板。`.env`、数据库�
 ## 启动与停止
 
 首次部署或重建依赖环境时，先按照 `docs/ENVIRONMENT.md` 创建 Conda/Node 环境并配置
-生产 `.env`。日常启动命令如下：
+生产 `.env`。完整且精确锁定的 Python 包版本位于 `requirements.txt`，前端版本位于
+`apps/workspace-web/package-lock.json`。日常启动命令如下：
 
 ```bash
 cd /storage/main/users/zhangrongpeng/data/fmt/apps/WGS-FMT-Agent-v2

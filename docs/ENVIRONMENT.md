@@ -6,11 +6,25 @@
 
 ## 1. 创建统一环境
 
-在项目根目录执行：
+最直接的安装方式是在项目根目录使用完整锁定的 `requirements.txt`。该文件包含所有直接和
+间接 Python 包的精确版本，以及基础设施、报告分析、FMT 模型和测试依赖：
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+npm ci --prefix apps/workspace-web
+npm run build --prefix apps/workspace-web
+```
+
+也可以使用 Conda 创建包含 Python、Node.js 和 Pandoc 的统一环境：
 
 ```bash
 conda env create -f environment.yml
 conda activate wgs-fmt-agent-v2
+python -m pip install -r requirements.txt
 npm ci --prefix apps/workspace-web
 npm run build --prefix apps/workspace-web
 ```
@@ -19,12 +33,21 @@ npm run build --prefix apps/workspace-web
 
 ```bash
 conda env update -n wgs-fmt-agent-v2 -f environment.yml --prune
+python -m pip install -r requirements.txt
 npm ci --prefix apps/workspace-web
 npm run build --prefix apps/workspace-web
 ```
 
 `torch` 在 `fmt` 依赖组中。若服务器需要指定 CUDA 版本，应先按服务器 CUDA/驱动版本安装
 PyTorch，再执行其余安装，避免安装不匹配的 GPU wheel。
+
+依赖声明变更后，使用以下命令重新生成精确版本文件：
+
+```bash
+uv lock
+uv export --frozen --all-extras --no-hashes --format requirements-txt \
+  --output-file requirements.txt
+```
 
 ## 2. 创建生产配置
 
