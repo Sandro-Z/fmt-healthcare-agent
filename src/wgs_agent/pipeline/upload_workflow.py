@@ -23,6 +23,7 @@ from typing import Any, BinaryIO
 
 _SAMPLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
 _FASTQ_SUFFIXES = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _utc_now() -> str:
@@ -52,7 +53,8 @@ class UploadWorkflowSettings:
             worker=Path(
                 os.environ.get(
                     "WGS_BIOINFORMATICS_WORKER",
-                    platform_root / "runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh",
+                    _PROJECT_ROOT
+                    / "runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh",
                 )
             ),
             threads=max(1, int(os.environ.get("WGS_UPLOAD_THREADS", "4"))),

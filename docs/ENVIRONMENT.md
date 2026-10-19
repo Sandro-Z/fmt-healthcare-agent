@@ -91,3 +91,67 @@ curl -I http://127.0.0.1:8502/
 ```
 
 当前服务端口：Next.js `8502`、FastAPI `8503`、可选 Agent daemon `7438`。
+# Environment and portable deployment
+
+> 本文中的示例路径均可替换。代码不能依赖特定用户名或 `/home/...` 绝对路径。
+
+## 三类依赖
+
+| 类型 | Git 中保存 | 部署方式 |
+|---|---|---|
+| 应用 Python | `requirements.txt`、`pyproject.toml` | 创建应用虚拟环境后安装 |
+| Web 前端 | `apps/workspace-web/package-lock.json` | `npm ci` |
+| 宏基因组分析 | `runtime/environments/*.yml` | 在线重建或恢复离线资源包 |
+| 参考数据库 | `runtime/resources/manifest.json`（只保存清单） | NAS/对象存储/离线盘迁移 |
+
+## 应用依赖
+
+```bash
+python3 -m venv /opt/wgs-fmt-env
+/opt/wgs-fmt-env/bin/pip install --upgrade pip
+/opt/wgs-fmt-env/bin/pip install -r requirements.txt
+
+cd apps/workspace-web
+npm ci
+npm run build
+```
+
+## 宏基因组运行时
+
+在线重建：
+
+```bash
+export FMT_ROOT=/srv/wgs-fmt
+bash deploy/install-bioinformatics-envs.sh
+```
+
+离线迁移与参考库恢复见 `runtime/resources/README.md`。部署完成后必须验证：
+
+```bash
+export FMT_ROOT=/srv/wgs-fmt
+bash deploy/check-bioinformatics-runtime.sh
+```
+
+## 路径解析规则
+
+应用默认调用仓库内的
+`runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh`，不会再拼接其他用户的 Home
+目录。资源根目录按以下优先级解析：
+
+1. `FMT_ROOT`
+2. `WGS_FMT_RESOURCE_ROOT`
+3. `WGS_WORKSPACE` 的父目录（单样本 Worker 兼容现有部署）
+4. 仓库的 `var/`（开发默认值）
+
+可通过 `ENV_ROOT`、`DB_ROOT`、`WGS_BIOINFORMATICS_OUTPUT_ROOT` 分别覆盖环境、数据库和结果
+目录。只有需要调用外置 Worker 时才设置 `WGS_BIOINFORMATICS_WORKER`。
+
+## 不得进入 Git 的内容
+
+- `.env`、API Key、数据库密码和 SSH 私钥；
+- 患者 FASTQ、样本元数据、报告和审计日志；
+- MySQL/SQLite 数据文件、Redis 快照、Elasticsearch 数据目录；
+- Conda 环境、参考数据库、训练产物和资源归档。
+
+生产数据应使用加密备份和访问控制单独迁移。MySQL 用 `mysqldump`/物理备份，Redis 与
+Elasticsearch 使用各自的快照机制，不能简单复制正在运行的数据目录。

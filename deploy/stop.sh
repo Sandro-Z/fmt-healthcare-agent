@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-DATA_ROOT="${WGS_WORKSPACE:-/storage/main/users/zhangrongpeng/data/fmt/wgs-fmt-agent-v2-data}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${WGS_APP_ROOT:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
+if [[ -f "$ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$ROOT/.env"
+  set +a
+fi
+DATA_ROOT="${WGS_WORKSPACE:-$ROOT/var}"
 
 for name in workspace-web workspace-api agent-daemon; do
   pid_file="$DATA_ROOT/run/$name.pid"

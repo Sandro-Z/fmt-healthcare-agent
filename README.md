@@ -22,6 +22,10 @@ deploy/
   stop.sh                 停止当前系统
   status.sh               查看状态
   restore-reverse-tunnels.sh
+runtime/
+  scripts/                可迁移的宏基因组分析 Worker
+  environments/           MetaPhlAn/HUMAnN 精确环境定义
+  resources/              大型资源清单与迁移说明
 data/                     本地运行数据（不提交 Git）
 datasets/                 评测数据集
 knowledge_base/           本地知识资源
@@ -36,6 +40,29 @@ tests/                    共享 Python 单元与集成测试
 Git 仓库仅保存源码、测试、文档和配置模板。`.env`、数据库、样本、报告、审计日志、
 模型产物、下载文献、向量索引及字体二进制均由 `.gitignore` 排除。中文 PDF 字体的本地
 安装方式见 `src/wgs_agent/tools/fonts/README.md`。
+
+## 迁移到其他服务器
+
+仓库已经包含应用源码、分析 Worker、环境版本、资源清单以及在线重建/离线迁移脚本。
+参考数据库和 Conda 环境合计约 113 GiB，不进入普通 Git；它们以带 SHA-256 校验的分组件
+资源包迁移。FASTQ、患者资料、生产数据库、API Key 和 `.env` 也不得提交。
+
+```bash
+# 源服务器：制作离线资源包（OUTPUT_DIRECTORY 应位于有足够空间的存储）
+export FMT_ROOT=/storage/main/users/zhangrongpeng/data/fmt
+bash deploy/package-bioinformatics-runtime.sh /path/to/wgs-fmt-shotgun-v1
+
+# 目标服务器：克隆仓库后恢复资源
+export FMT_ROOT=/srv/wgs-fmt
+bash deploy/restore-bioinformatics-runtime.sh /path/to/wgs-fmt-shotgun-v1
+cp .env.production.example .env
+# 修改 .env 中的路径、密码、Token 和服务地址
+bash deploy/start.sh
+bash deploy/status.sh
+```
+
+若目标服务器可联网，可先运行 `bash deploy/install-bioinformatics-envs.sh` 重建两个分析环境，
+再从官方来源安装参考数据库。完整清单及说明见 `runtime/resources/README.md`。
 
 ## 启动与停止
 

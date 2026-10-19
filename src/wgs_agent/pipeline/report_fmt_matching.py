@@ -97,11 +97,22 @@ R_SCRIPT = os.path.join(_FMT_SCRIPT_DIR, "run_zippca_mbdenoise.r")
 # self-contained artifact so reports do not silently lose donor ranking.
 _AGENT_ROOT = Path(__file__).resolve().parents[3]
 _FMT_ROOT = _AGENT_ROOT.parent.parent
-TRIPLET_MODEL_DIR = Path(
-    os.environ.get(
-        "WGS_FMT_TRIPLET_MODEL_DIR",
-        _AGENT_ROOT / "data/model-training/fmt-triplet-v1",
-    )
+_RESOURCE_ROOT = Path(
+    os.environ.get("WGS_FMT_RESOURCE_ROOT", os.environ.get("FMT_ROOT", _FMT_ROOT))
+).expanduser()
+
+
+def _resource_path(env_name: str, portable: Path, legacy: Path) -> Path:
+    configured = os.environ.get(env_name, "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    return portable if portable.exists() or not legacy.exists() else legacy
+
+
+TRIPLET_MODEL_DIR = _resource_path(
+    "WGS_FMT_TRIPLET_MODEL_DIR",
+    _RESOURCE_ROOT / "models/fmt-triplet-v1",
+    _AGENT_ROOT / "data/model-training/fmt-triplet-v1",
 )
 TRIPLET_PREDICTOR_SCRIPT = Path(
     os.environ.get(
@@ -109,18 +120,26 @@ TRIPLET_PREDICTOR_SCRIPT = Path(
         _AGENT_ROOT / "scripts/predict_fmt_triplet_model.py",
     )
 )
-TRIPLET_BASELINE_SPECIES = Path(
-    os.environ.get("WGS_FMT_BASELINE_SPECIES", _FMT_ROOT / "species_abundance_train.csv")
+TRIPLET_BASELINE_SPECIES = _resource_path(
+    "WGS_FMT_BASELINE_SPECIES",
+    _RESOURCE_ROOT / "data/fmt-matching/species_abundance_train.csv",
+    _FMT_ROOT / "species_abundance_train.csv",
 )
-TRIPLET_MATCH_FILE = Path(os.environ.get("WGS_FMT_MATCH_FILE", _FMT_ROOT / "match.xlsx"))
+TRIPLET_MATCH_FILE = _resource_path(
+    "WGS_FMT_MATCH_FILE",
+    _RESOURCE_ROOT / "data/fmt-matching/match.xlsx",
+    _FMT_ROOT / "match.xlsx",
+)
 TRIPLET_POST_SPECIES = Path(
     os.environ.get(
         "WGS_FMT_POST_SPECIES",
-        _FMT_ROOT / "postfmt_processed/matrices/species_relative_abundance_percent.tsv",
+        _RESOURCE_ROOT / "postfmt_processed/matrices/species_relative_abundance_percent.tsv",
     )
 )
 TRIPLET_PROFILE_DIR = Path(
-    os.environ.get("WGS_FMT_PROFILE_DIR", _FMT_ROOT / "postfmt_processed/profiles/metaphlan")
+    os.environ.get(
+        "WGS_FMT_PROFILE_DIR", _RESOURCE_ROOT / "postfmt_processed/profiles/metaphlan"
+    )
 )
 
 _triplet_module = None

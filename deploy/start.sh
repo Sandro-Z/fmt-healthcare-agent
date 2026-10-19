@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-ROOT="${WGS_APP_ROOT:-/storage/main/users/zhangrongpeng/data/fmt/apps/WGS-FMT-Agent-v2}"
-ENV_ROOT="${WGS_ENV_ROOT:-/storage/main/users/zhangrongpeng/data/fmt/runtime/envs/wgs-fmt-agent-v2}"
-DATA_ROOT="${WGS_WORKSPACE:-/storage/main/users/zhangrongpeng/data/fmt/wgs-fmt-agent-v2-data}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${WGS_APP_ROOT:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
 
 cd "$ROOT"
 if [[ -f .env ]]; then
@@ -12,6 +11,28 @@ if [[ -f .env ]]; then
   source .env
   set +a
 fi
+
+DATA_ROOT="${WGS_WORKSPACE:-$ROOT/var}"
+if [[ -n "${WGS_ENV_ROOT:-}" ]]; then
+  ENV_ROOT="$WGS_ENV_ROOT"
+elif [[ -x "${FMT_ROOT:-${WGS_FMT_RESOURCE_ROOT:-$ROOT/var}}/runtime/envs/wgs-fmt-agent-v2/bin/python" ]]; then
+  ENV_ROOT="${FMT_ROOT:-${WGS_FMT_RESOURCE_ROOT:-$ROOT/var}}/runtime/envs/wgs-fmt-agent-v2"
+else
+  ENV_ROOT="$ROOT/.venv"
+fi
+WEB_HOST="${WGS_WEB_HOST:-0.0.0.0}"
+WEB_PORT="${WGS_WEB_PORT:-8502}"
+API_HOST="${WGS_API_HOST:-0.0.0.0}"
+API_PORT="${WGS_API_PORT:-8503}"
+
+[[ -x "$ENV_ROOT/bin/python" ]] || {
+  printf 'Application Python environment missing: %s\n' "$ENV_ROOT" >&2
+  exit 2
+}
+[[ -x "$ROOT/apps/workspace-web/node_modules/.bin/next" ]] || {
+  printf 'Frontend build dependencies missing; run npm ci and npm run build.\n' >&2
+  exit 2
+}
 
 mkdir -p "$DATA_ROOT/logs" "$DATA_ROOT/run" "$DATA_ROOT/results" \
   "$DATA_ROOT/traces" "$DATA_ROOT/knowledge-index"
@@ -31,11 +52,15 @@ start_service() {
 }
 
 start_service workspace-api "$ENV_ROOT/bin/python" -m uvicorn app.main:app \
-  --app-dir "$ROOT/apps/workspace-api" --host 0.0.0.0 --port 8503
+  --app-dir "$ROOT/apps/workspace-api" --host "$API_HOST" --port "$API_PORT"
 start_service workspace-web "$ROOT/apps/workspace-web/node_modules/.bin/next" \
-  start "$ROOT/apps/workspace-web" -p 8502 -H 0.0.0.0
+  start "$ROOT/apps/workspace-web" -p "$WEB_PORT" -H "$WEB_HOST"
 
-bash "$ROOT/deploy/restore-reverse-tunnels.sh"
+if [[ "${WGS_ENABLE_REVERSE_TUNNELS:-false}" == true ]]; then
+  bash "$ROOT/deploy/restore-reverse-tunnels.sh"
+else
+  echo "reverse tunnels disabled (set WGS_ENABLE_REVERSE_TUNNELS=true to enable)"
+fi
 
 if [[ -n "${DEEPSEEK_API_KEY:-}" || -n "${ANTHROPIC_API_KEY:-}" ]]; then
   start_service agent-daemon "$ENV_ROOT/bin/wgs-agent" daemon --host 127.0.0.1 --port 7438

@@ -1,0 +1,11 @@
+name: fmt-func
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - python=3.9.19
+  - bowtie2=2.5.4
+  - diamond=2.1.8
+  - pip
+  - pip:
+      - humann==3.9
