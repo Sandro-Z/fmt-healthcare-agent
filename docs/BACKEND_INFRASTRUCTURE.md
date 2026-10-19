@@ -4,7 +4,7 @@
 
 - Local SQLite (`var/db/wgs_agent.db`): users, conversations, messages, memory metadata, and audit records. MySQL is an explicit optional alternative via `WGS_DATABASE_URL`.
 - Redis: short-term memory with TTL and long-term memory with an optional TTL.
-- Elasticsearch: BM25 keyword search and dense-vector kNN search.
+- Elasticsearch: BM25 keyword search and dense-vector kNN search. The deployment scripts manage an authenticated, loopback-only Docker node by default.
 - LitKG Claim API: relationship-graph evidence. Results are fused with Elasticsearch by reciprocal rank fusion (RRF).
 
 ## Configuration
@@ -17,6 +17,9 @@ WGS_DATABASE_URL
 WGS_REDIS_URL
 WGS_ELASTICSEARCH_URL
 WGS_ELASTICSEARCH_INDEX
+WGS_ELASTICSEARCH_MANAGED
+WGS_ELASTICSEARCH_USERNAME
+WGS_ELASTICSEARCH_PASSWORD_FILE
 WGS_EMBEDDING_DIMENSIONS
 WGS_CLAIM_API_URL
 WGS_CLAIM_API_KNOWLEDGE_BASE_ID
@@ -35,8 +38,12 @@ python scripts/init_data.py
 ```
 
 This does not start MySQL, Redis, Elasticsearch, LitKG, Web, or API services. Optional
-services and their indexes must be prepared separately on the same server. See
-[single-server architecture](SINGLE_SERVER.md) for the later application startup.
+MySQL, Redis, and LitKG services must be prepared separately. Later, `deploy/start.sh`
+starts the managed Elasticsearch node, provisions a scoped application account,
+and creates its index before starting the application. Set
+`WGS_ELASTICSEARCH_MANAGED=false` to use an existing instance or omit Elasticsearch.
+See [single-server architecture](SINGLE_SERVER.md#elasticsearch-随项目启动) for configuration,
+Docker access requirements, persisted data volumes, and credential backups.
 
 ## API
 

@@ -42,7 +42,7 @@ flowchart LR
 - Next.js 负责页面、状态和交互，不直接查询数据库；
 - FastAPI 负责校验请求、组织业务、调用数据库和工具，向前端返回 JSON 或文件；
 - SQL 保存结构化业务数据，样本和大型分析产物保存在文件系统；
-- Redis、Elasticsearch 和 LitKG 是可插拔的外部能力，不是页面服务器。
+- Redis、Elasticsearch 和 LitKG 是可插拔的检索/记忆能力；Elasticsearch 默认由部署脚本启动本机 Docker 实例。
 
 ## 3. 目录结构
 
@@ -259,6 +259,8 @@ WGS-FMT-Agent-v2/
 
 截至 2026-10-18，运行中的后端健康检查显示：SQLite正常，Redis未启动，Elasticsearch未启动。
 因此“支持 MySQL/Redis/ES”和“已经实际启用”需要区分。
+部署脚本现已支持默认启动托管 ES；上述为历史运行记录，当前实例状态请运行
+`bash deploy/status.sh` 核对。配置与数据卷说明见 [单服务器架构](SINGLE_SERVER.md#elasticsearch-随项目启动)。
 
 ## 9. 安装与启动
 
@@ -336,7 +338,7 @@ curl -I http://127.0.0.1:8502/
 ## 11. 当前需要注意的架构缺口
 
 1. 运行环境仍使用 SQLite，生产 MySQL 尚未接管；
-2. Redis 和 Elasticsearch 接口已经实现，但对应服务当前未运行；
+2. Redis 仍需独立启动；Elasticsearch 已接入部署脚本的自动启动，实际运行状态需在部署后检查；
 3. 部分会话与对话接口仍使用内部 `local-researcher`，尚未全部绑定当前登录用户；
 4. 会话读取需要补充严格的用户归属校验，才能达到真正的多用户数据隔离；
 5. Agent设置和Skills保存在JSON文件，多实例部署时会出现配置同步问题；

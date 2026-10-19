@@ -21,6 +21,17 @@ PY
 umask 077
 "$WGS_ENV_ROOT/bin/python" "$ROOT/scripts/init_data.py"
 
+if [[ "$WGS_ELASTICSEARCH_MANAGED" == true ]]; then
+  manage_elasticsearch start
+  export WGS_ELASTICSEARCH_USERNAME=wgs-platform
+  export WGS_ELASTICSEARCH_PASSWORD_FILE="$DATA_ROOT/elasticsearch/client-password"
+  export WGS_ELASTICSEARCH_API_KEY=""
+  # Create the empty keyword/vector index before serving requests.
+  "$WGS_ENV_ROOT/bin/python" -c 'from wgs_fmt_platform.infrastructure.search import HybridKnowledgeSearch; HybridKnowledgeSearch().ensure_index()'
+else
+  echo "elasticsearch external: automatic startup disabled"
+fi
+
 start_service() {
   local name="$1"
   local pid_file="$DATA_ROOT/run/$name.pid"

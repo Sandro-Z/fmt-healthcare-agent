@@ -7,6 +7,7 @@
 | workspace-web | `apps/workspace-web` | `0.0.0.0:8502` | 当前服务器 IP + 端口入口 |
 | workspace-api | `apps/workspace-api` | `127.0.0.1:8503` | Next.js `/backend/*` 转发 |
 | agent-daemon | `src/wgs_agent` | `127.0.0.1:7438` | 可选 JSON-RPC 后台 |
+| elasticsearch | `scripts/manage_elasticsearch.py` / Docker | `127.0.0.1:9200` | 默认随项目启动的认证检索实例，可关闭自动托管 |
 
 已停用并从活动源码删除：Streamlit 8501 服务、旧 FastAPI 8000 服务及其容器入口。
 

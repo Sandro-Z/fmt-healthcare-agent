@@ -67,6 +67,13 @@ bash deploy/status.sh
 bash deploy/stop.sh
 ```
 
+`start.sh` 默认先启动本机 Elasticsearch Docker 单节点，等待就绪后初始化检索索引，
+再启动 API 和 Web。首次启动会拉取固定版本官方镜像，需要当前用户能够访问本机 Docker。
+实例仅发布 `127.0.0.1:9200`，自动生成认证凭据，默认内存上限为 2 GiB、JVM 堆为 512 MiB。
+`status.sh` 和 `stop.sh` 同时管理该实例，停止时保留索引数据。
+如需使用已有 Elasticsearch 或暂不启用，在 `.env` 设置 `WGS_ELASTICSEARCH_MANAGED=false`。
+详细参数和备份方式见 [单服务器架构](docs/SINGLE_SERVER.md#elasticsearch-随项目启动)。
+
 浏览器访问 `http://<当前服务器IP>:8502/`。Next.js 默认监听 `0.0.0.0:8502`，
 通过同源 `/backend/*` 转发到 `127.0.0.1:8503`；可选 daemon 仅监听 `127.0.0.1:7438`。
 无需域名、跳板机或反向 SSH 隧道。脚本不修改防火墙或路由。

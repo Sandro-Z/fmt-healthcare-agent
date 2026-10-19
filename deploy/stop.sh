@@ -18,3 +18,5 @@ for name in workspace-web workspace-api agent-daemon; do
   fi
   rm -f "$pid_file"
 done
+
+manage_elasticsearch stop

@@ -11,3 +11,5 @@ for name in workspace-api workspace-web agent-daemon; do
     echo "$name stopped"
   fi
 done
+
+manage_elasticsearch status

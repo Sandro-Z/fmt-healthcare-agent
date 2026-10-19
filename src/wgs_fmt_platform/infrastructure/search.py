@@ -14,6 +14,11 @@ class HybridKnowledgeSearch:
         kwargs: dict[str, Any] = {}
         if settings.elasticsearch_api_key:
             kwargs["api_key"] = settings.elasticsearch_api_key
+        elif settings.elasticsearch_password_file is not None:
+            password = settings.elasticsearch_password_file.read_text().strip()
+            if not password:
+                raise ValueError("Elasticsearch password file is empty")
+            kwargs["basic_auth"] = (settings.elasticsearch_username, password)
         self.client = client or Elasticsearch(settings.elasticsearch_url, **kwargs)
         self.index = settings.elasticsearch_index
         self.dimensions = settings.embedding_dimensions

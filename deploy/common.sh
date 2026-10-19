@@ -25,6 +25,21 @@ export WGS_WEB_HOST="${WGS_WEB_HOST:-0.0.0.0}"
 export WGS_WEB_PORT="${WGS_WEB_PORT:-8502}"
 export WGS_API_PORT="${WGS_API_PORT:-8503}"
 export WGS_PORT="${WGS_PORT:-7438}"
+export WGS_ELASTICSEARCH_URL="${WGS_ELASTICSEARCH_URL:-http://127.0.0.1:9200}"
+export WGS_ELASTICSEARCH_MANAGED="${WGS_ELASTICSEARCH_MANAGED:-true}"
+case "${WGS_ELASTICSEARCH_MANAGED,,}" in
+  true|1) WGS_ELASTICSEARCH_MANAGED=true ;;
+  false|0) WGS_ELASTICSEARCH_MANAGED=false ;;
+  *) echo "WGS_ELASTICSEARCH_MANAGED must be true or false" >&2; exit 2 ;;
+esac
+
+manage_elasticsearch() {
+  local interpreter="$WGS_ENV_ROOT/bin/python"
+  if [[ ! -x "$interpreter" ]]; then
+    interpreter=python3
+  fi
+  "$interpreter" "$ROOT/scripts/manage_elasticsearch.py" "$@"
+}
 
 for port in "$WGS_WEB_PORT" "$WGS_API_PORT" "$WGS_PORT"; do
   if [[ ! "$port" =~ ^[0-9]{1,5}$ ]] || (( 10#$port < 1 || 10#$port > 65535 )); then

@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     elasticsearch_url: str = "http://127.0.0.1:9200"
     elasticsearch_index: str = "wgs-knowledge"
     elasticsearch_api_key: str = ""
+    elasticsearch_username: str = "elastic"
+    elasticsearch_password_file: Path | None = None
     embedding_dimensions: int = 384
     graph_text_search_path: str = "/api/knowledge-bases/{knowledge_base_id}/claims"
     artifact_root: Path = Path("./var/artifacts")
@@ -69,6 +71,8 @@ class Settings(BaseSettings):
         if "metadata_database_url" not in self.model_fields_set:
             self.metadata_database_url = f"sqlite:///{self.workspace / 'metadata.db'}"
         self.nextflow_pipeline = project_path(self.nextflow_pipeline)
+        if self.elasticsearch_password_file is not None:
+            self.elasticsearch_password_file = project_path(self.elasticsearch_password_file)
         return self
 
 
