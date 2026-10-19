@@ -704,6 +704,7 @@ def _sample_artifacts(sample_id: str) -> dict[str, dict[str, Any]]:
         "pdf": RESULTS_DIR / f"{sample_id}_health_report.pdf",
         "fmt_plot": _fmt_plot_path(sample_id),
         "evidence": RESULTS_DIR / f"{sample_id}_report_evidence.json",
+        "structured": RESULTS_DIR / f"{sample_id}_report.json",
     }
     return {
         name: {
@@ -850,6 +851,7 @@ def report_file(sample_id: str, kind: str) -> FileResponse:
         "analysis": (RESULTS_DIR / f"{sample_id}_analysis.json", "application/json"),
         "knowledge": (RESULTS_DIR / f"{sample_id}_knowledge.json", "application/json"),
         "evidence": (RESULTS_DIR / f"{sample_id}_report_evidence.json", "application/json"),
+        "structured": (RESULTS_DIR / f"{sample_id}_report.json", "application/json"),
     }
     if kind not in mapping:
         raise HTTPException(404, "不支持的报告产物类型。")
@@ -887,7 +889,13 @@ def generate_report(sample_id: str, payload: ReportGeneratePayload) -> dict[str,
         raise HTTPException(422, str(exc)) from exc
     if result.get("is_error"):
         raise HTTPException(502, str(result.get("content", "报告生成失败。")))
-    return {"status": "complete", "sample_id": sample_id, "artifacts": _sample_artifacts(sample_id)}
+    document = _json_object(RESULTS_DIR / f"{sample_id}_report.json")
+    audit = document.get("audit") if isinstance(document.get("audit"), dict) else {}
+    return {
+        "status": "complete", "sample_id": sample_id, "artifacts": _sample_artifacts(sample_id),
+        "llm_status": audit.get("llm_status", "unknown"),
+        "llm_accepted_topics": audit.get("accepted_topics", 0),
+    }
 
 
 def _kb_connect() -> sqlite3.Connection:

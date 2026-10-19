@@ -167,13 +167,30 @@ def build_full_report(
     metabolite_data, drug_data, disease_data, knowledge_data, llm_advice="",
     fmt_matching_data=None, protein_data=None, report_context=None,
 ):
-    """Render the same evidence-led content for all report formats."""
-    from wgs_agent.tools.detailed_report import build_detailed_report
-    return build_detailed_report(
-        sample_id, species_data, compare_data, enterotype_data, pathway_data,
-        metabolite_data, drug_data, disease_data, knowledge_data, llm_advice,
-        fmt_matching_data, protein_data, report_context,
-    )
+    """Render the versioned eleven-section health report for all report formats."""
+    from wgs_agent.reporting.document import build_document, render_markdown
+    from wgs_agent.reporting.narrative import validate_payload
+
+    context = report_context or {}
+    document = context.get("report_document")
+    if document is None:
+        document = build_document(
+            sample_id, species_data, compare_data, enterotype_data, pathway_data,
+            metabolite_data, drug_data, disease_data, knowledge_data,
+            protein_data, fmt_matching_data, context,
+        )
+        if llm_advice:
+            check = validate_payload(llm_advice, document, document["sections"])
+            for section in document["sections"]:
+                for topic in section["topics"]:
+                    item = check["accepted"].get(topic["id"])
+                    if item:
+                        topic.update({"interpretation": item["interpretation"], "advice": item["advice"],
+                                      "narrative_source": "llm", "narrative_evidence_ids": item["evidence_ids"],
+                                      "support_quotes": item["support_quotes"]})
+    if document.get("sample_id") != sample_id:
+        raise ValueError("report document belongs to a different sample")
+    return render_markdown(document)
 
 
 # ── 生成 PDF（优先 xelatex LaTeX 排版，降级 weasyprint） ──
@@ -426,11 +443,10 @@ def _generate_fpdf_report(report_md: str, sample_id: str, output_path: str) -> s
     from datetime import datetime
     from fpdf import FPDF
 
-    font_dir = os.path.join(os.path.dirname(__file__), "fonts")
-    regular_font = os.path.join(font_dir, "MSYH.TTC")
-    bold_font = os.path.join(font_dir, "MSYHBD.TTC")
-    if not os.path.isfile(regular_font):
-        raise RuntimeError(f"PDF 中文字体不存在: {regular_font}")
+    from wgs_agent.reporting.catalog import TITLE
+    from wgs_agent.reporting.fonts import resolve_cjk_fonts
+
+    regular_font, bold_font = resolve_cjk_fonts()
 
     class WgsReportPDF(FPDF):
         def header(self):
@@ -438,11 +454,12 @@ def _generate_fpdf_report(report_md: str, sample_id: str, output_path: str) -> s
                 return
             self.set_font("WgsCN", "", 8.5)
             self.set_text_color(100, 100, 100)
-            self.cell(0, 6, "样本多维分析与配对报告", align="L")
-            self.set_x(-70)
-            self.cell(55, 6, sample_id, align="R")
+            self.cell(0, 6, "肠道菌群精准健康分析报告", align="L")
+            self.set_x(-98)
+            self.set_font("WgsCN", "", 7)
+            self.cell(80, 6, sample_id, align="R")
             self.ln(8)
-            self.set_draw_color(120, 150, 190)
+            self.set_draw_color(0, 164, 166)
             self.line(self.l_margin, self.y, self.w - self.r_margin, self.y)
             self.ln(3)
 
@@ -458,7 +475,8 @@ def _generate_fpdf_report(report_md: str, sample_id: str, output_path: str) -> s
         text = re.sub(r"[\U0001F000-\U0001FAFF\U00002600-\U000027BF]", "", text)
         text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "[图表见在线报告]", text)
         text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)
-        text = text.replace("**", "").replace("__", "").replace("`", "")
+        # Double underscores are valid sample IDs, not necessarily emphasis.
+        text = text.replace("**", "").replace("`", "")
         return text.strip()
 
     pdf = WgsReportPDF(format="A4", unit="mm")
@@ -466,31 +484,44 @@ def _generate_fpdf_report(report_md: str, sample_id: str, output_path: str) -> s
     pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_font("WgsCN", "", regular_font)
     pdf.add_font("WgsCN", "B", bold_font if os.path.isfile(bold_font) else regular_font)
-    pdf.set_title(f"样本多维分析与配对报告 - {sample_id}")
-    pdf.set_author("WGS.FMT-Agent")
+    pdf.set_title(f"{TITLE} - {sample_id}")
+    pdf.set_author("WGS.FMT")
+    pdf.set_lang("zh-CN")
 
     # Cover page
     pdf.add_page()
-    pdf.set_fill_color(25, 60, 120)
-    pdf.rect(0, 0, 210, 62, style="F")
-    pdf.set_y(76)
-    pdf.set_font("WgsCN", "B", 25)
-    pdf.set_text_color(25, 60, 120)
-    pdf.multi_cell(0, 13, "样本多维分析与配对报告", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_y(44)
+    pdf.set_font("WgsCN", "", 12)
+    pdf.set_text_color(0, 148, 151)
+    pdf.cell(0, 10, "WGS.FMT  /  微生态健康评估", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(17)
+    pdf.set_font("WgsCN", "B", 29)
+    pdf.set_text_color(25, 60, 100)
+    pdf.multi_cell(0, 16, "肠道菌群\n精准健康分析报告", align="L", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(8)
     pdf.set_font("WgsCN", "", 12)
     pdf.set_text_color(70, 80, 95)
-    pdf.cell(0, 8, f"样本编号：{sample_id}", align="C", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, f"样本编号：{sample_id}", new_x="LMARGIN", new_y="NEXT")
+    date_match = re.search(r"(?m)^报告日期[：:]\s*(\S+)", report_md)
+    date_text = date_match.group(1) if date_match else datetime.now().strftime('%Y-%m-%d')
+    pdf.cell(0, 8, f"报告日期：{date_text}", new_x="LMARGIN", new_y="NEXT")
+    if "演示说明：" in report_md:
+        pdf.set_font("WgsCN", "B", 11)
+        pdf.set_text_color(155, 102, 20)
+        pdf.cell(0, 9, "合成数据演示 · 非真实检测报告", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(18)
-    pdf.set_fill_color(235, 242, 250)
-    pdf.set_draw_color(110, 145, 185)
+    pdf.set_fill_color(238, 248, 248)
+    pdf.set_draw_color(0, 164, 166)
     pdf.set_font("WgsCN", "", 10.5)
     pdf.multi_cell(
         0, 8,
-        "本报告基于 MetaPhlAn 与 HUMAnN 宏基因组分析生成。疾病和代谢物内容反映微生物组统计关联及功能潜能，不构成临床诊断。",
-        border=1, fill=True, align="C", new_x="LMARGIN", new_y="NEXT",
+        "菌群结构与多样性 · 重点菌群 · 微生态功能\n营养与代谢 · 肠脑轴 · 症状关联 · 疾病特征 · 抗生素耐药性",
+        border="L", fill=True, align="L", new_x="LMARGIN", new_y="NEXT",
     )
+    pdf.set_y(242)
+    pdf.set_font("WgsCN", "", 9)
+    pdf.set_text_color(110, 120, 125)
+    pdf.multi_cell(0, 6, "本报告用于健康管理与研究参考，需结合个人背景及临床检查阅读。", new_x="LMARGIN", new_y="NEXT")
 
     pdf.add_page()
     in_table = False
@@ -529,14 +560,20 @@ def _generate_fpdf_report(report_md: str, sample_id: str, output_path: str) -> s
             in_table = False
             level = len(heading.group(1))
             title = clean(heading.group(2))
-            if pdf.get_y() > 250:
+            if level == 1:
+                continue  # The cover already carries the report title.
+            chapter = level == 2 and bool(re.match(r"^\d{2}\s", title))
+            if chapter or (level == 2 and title == "附录与参考资料"):
                 pdf.add_page()
+            elif pdf.will_page_break(48 if level == 3 else 35):
+                pdf.add_page()
+            pdf.start_section(title, level=0 if level == 2 else 1)
             pdf.ln(4 if level <= 2 else 2)
-            pdf.set_text_color(25, 60, 120 if level <= 2 else 150)
+            pdf.set_text_color(0, 136, 142) if level == 3 else pdf.set_text_color(25, 60, 100)
             pdf.set_font("WgsCN", "B", {1: 18, 2: 14, 3: 12, 4: 10.5}[level])
             pdf.multi_cell(0, 7, title, new_x="LMARGIN", new_y="NEXT")
             if level <= 2:
-                pdf.set_draw_color(80, 125, 175)
+                pdf.set_draw_color(0, 164, 166)
                 pdf.line(pdf.l_margin, pdf.y, pdf.w - pdf.r_margin, pdf.y)
             continue
         if line.startswith("|") and line.endswith("|"):
@@ -554,12 +591,12 @@ def _generate_fpdf_report(report_md: str, sample_id: str, output_path: str) -> s
             in_table = False
             if table_rows:
                 from fpdf.fonts import FontFace
-                pdf.set_font("WgsCN", "", 8)
+                pdf.set_font("WgsCN", "", 9)
                 pdf.set_text_color(35, 45, 60)
                 ncols = len(table_rows[0])
-                widths = {2:(.32,.68), 3:(.40,.22,.38), 4:(.38,.20,.20,.22)}.get(ncols)
-                with pdf.table(col_widths=widths, line_height=5, padding=1.5,
-                               headings_style=FontFace(emphasis="BOLD", fill_color=(226,236,248)),
+                widths = {2:(.34,.66), 3:(.29,.18,.53), 4:(.34,.20,.29,.17)}.get(ncols)
+                with pdf.table(col_widths=widths, line_height=5.6, padding=1.7,
+                               headings_style=FontFace(emphasis="BOLD", color=(255,255,255), fill_color=(0,158,161)),
                                borders_layout="HORIZONTAL_LINES") as report_table:
                     for cells in table_rows:
                         row = report_table.row()
@@ -576,19 +613,20 @@ def _generate_fpdf_report(report_md: str, sample_id: str, output_path: str) -> s
         quote = line.startswith(">")
         bullet = bool(re.match(r"^[-*+]\s+", line))
         numbered = bool(re.match(r"^\d+[.)]\s+", line))
-        text = clean(re.sub(r"^(>|[-*+]|\d+[.)])\s*", "", line))
+        # Only remove real list markers; '**检测结果**' is emphasis, not a bullet.
+        text = clean(re.sub(r"^(?:>\s*|[-*+]\s+|\d+[.)]\s+)", "", line))
         if not text:
             continue
-        pdf.set_font("WgsCN", "", 9.5)
+        pdf.set_font("WgsCN", "", 10.5)
         pdf.set_text_color(45, 55, 65)
         if quote:
-            pdf.set_fill_color(234, 242, 250)
-            pdf.multi_cell(0, 6.2, text, border="L", fill=True, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_fill_color(238, 248, 248)
+            pdf.multi_cell(0, 7, text, border="L", fill=True, new_x="LMARGIN", new_y="NEXT")
         elif bullet or numbered:
             marker = "• " if bullet else "– "
-            pdf.multi_cell(0, 6.2, marker + text, align="L", wrapmode="CHAR", new_x="LMARGIN", new_y="NEXT")
+            pdf.multi_cell(0, 7, marker + text, align="L", wrapmode="CHAR", new_x="LMARGIN", new_y="NEXT")
         else:
-            pdf.multi_cell(0, 6.2, text, align="L", wrapmode="CHAR", new_x="LMARGIN", new_y="NEXT")
+            pdf.multi_cell(0, 7, text, align="L", wrapmode="CHAR", new_x="LMARGIN", new_y="NEXT")
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     pdf.output(output_path)

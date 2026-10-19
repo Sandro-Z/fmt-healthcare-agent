@@ -120,7 +120,7 @@ export const api = {
   sampleWorkflow: (id:string) => request<Record<string,any>>(`/samples/${encodeURIComponent(id)}/workflow`),
   sample: (id:string) => request<SampleDetail>(`/samples/${encodeURIComponent(id)}`),
   reports: (q="") => request<ReportList>(`/reports?q=${encodeURIComponent(q)}`),
-  generateReport: (id:string) => request<{status:string;sample_id:string;artifacts:Record<string,ArtifactInfo>}>(`/reports/${encodeURIComponent(id)}/generate`, {method:"POST",body:JSON.stringify({confirmed:true})}),
+  generateReport: (id:string) => request<{status:string;sample_id:string;artifacts:Record<string,ArtifactInfo>;llm_status?:string;llm_accepted_topics?:number}>(`/reports/${encodeURIComponent(id)}/generate`, {method:"POST",body:JSON.stringify({confirmed:true})}),
   knowledgeStats: () => request<KnowledgeStats>("/knowledge/stats"),
   papers: (params:Record<string,string|number|boolean|undefined>) => {
     const query=new URLSearchParams(); Object.entries(params).forEach(([key,value])=>{if(value!==undefined&&value!=="")query.set(key,String(value))});
