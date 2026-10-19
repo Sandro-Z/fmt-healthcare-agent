@@ -27,13 +27,14 @@ from wgs_agent.pipeline.upload_workflow import get_workflow_status, submit_uploa
 from app.local_chat import LocalChatError, list_models
 from wgs_agent.tools.knowledge_tools import claim_record_to_reference
 from wgs_fmt_platform.config import get_settings
+from wgs_fmt_platform.paths import knowledge_db_path, project_path, runner_status_path, runtime_path, workspace_root
 from wgs_fmt_platform.infrastructure.api import router as infrastructure_router
 from wgs_fmt_platform.infrastructure.api import ensure_local_user
 from wgs_fmt_platform.infrastructure.database import Conversation, Message, SessionLocal, create_schema
 
 
 ROOT = Path(__file__).resolve().parents[3]
-STORE = Path(os.environ.get("WGS_AGENT_CONFIG_DIR", ROOT / "data" / "agent-config"))
+STORE = runtime_path("WGS_AGENT_CONFIG_DIR", "agent-config")
 AGENTS_FILE = STORE / "agents.json"
 SKILLS_FILE = STORE / "skills.json"
 SETTINGS_FILE = STORE / "workspace-settings.json"
@@ -41,12 +42,9 @@ PENDING_FILE = STORE / "pending-actions.json"
 LOCK = Lock()
 SAFE_ID = re.compile(r"^[a-z][a-z0-9_-]{1,63}$")
 TOOL_NAMES = {item["function"]["name"] for item in TOOLS}
-RESULTS_DIR = Path(os.environ.get("WGS_RESULTS_DIR", ROOT / "data" / "results"))
-KNOWLEDGE_DB = Path(os.environ.get("WGS_KNOWLEDGE_DB", ROOT / "knowledge_base" / "kb.db"))
-RUNNER_STATUS = Path(os.environ.get(
-    "WGS_RUNNER_STATUS",
-    "/storage/main/users/zhangrongpeng/data/fmt/postfmt_processed/status/runner_status.tsv",
-))
+RESULTS_DIR = runtime_path("WGS_RESULTS_DIR", "results")
+KNOWLEDGE_DB = knowledge_db_path()
+RUNNER_STATUS = runner_status_path()
 SAMPLE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 
 
@@ -166,7 +164,7 @@ class WorkspaceSettingsPayload(BaseModel):
     display_name: str = Field(default="研究员", max_length=80)
     model_service: ModelServicePayload = Field(default_factory=ModelServicePayload)
     mcp_servers: list[McpServerPayload] = Field(default_factory=list, max_length=20)
-    knowledge_base_path: str = Field(default="knowledge_base/kb.db", max_length=1000)
+    knowledge_base_path: str = Field(default_factory=lambda: str(knowledge_db_path()), max_length=1000)
     role_prompt: str = Field(default="", max_length=12000)
     response_style: str = Field(default="balanced", pattern="^(concise|balanced|detailed)$")
     language: str = Field(default="zh-CN", max_length=20)
@@ -178,7 +176,7 @@ class WorkspaceSettingsPayload(BaseModel):
     audit_enabled: bool = True
     allow_sensitive_analysis: bool = False
     sandbox_mode: str = Field(default="process", pattern="^(process|docker)$")
-    sandbox_workspace: str = Field(default="workspaces/default", max_length=1000)
+    sandbox_workspace: str = Field(default_factory=lambda: str(runtime_path("WGS_SANDBOX_WORKSPACE", "workspaces", "default")), max_length=1000)
     sandbox_allowed_commands: list[str] = Field(default_factory=lambda: ["python", "python3", "bash", "sh"], max_length=50)
     sandbox_timeout_s: int = Field(default=300, ge=5, le=7200)
     sandbox_cpu_limit: float = Field(default=2.0, ge=0.1, le=64)
@@ -248,14 +246,7 @@ def _default_settings() -> dict[str, Any]:
 def _settings(*, masked: bool = False) -> dict[str, Any]:
     value = _read_object(SETTINGS_FILE, _default_settings())
     merged = WorkspaceSettingsPayload.model_validate(value).model_dump()
-    merged["artifact_sandbox_root"] = str(
-        Path(
-            os.environ.get(
-                "WGS_AGENT_SANDBOX_ROOT",
-                "/storage/main/users/zhangrongpeng/data/fmt/wgs-fmt-agent-v2-data/sandboxes",
-            )
-        ).resolve()
-    )
+    merged["artifact_sandbox_root"] = str(runtime_path("WGS_AGENT_SANDBOX_ROOT", "sandboxes"))
     key = merged["model_service"].get("api_key", "")
     if masked and key:
         merged["model_service"]["api_key"] = f"••••{key[-4:]}"
@@ -289,7 +280,9 @@ def _valid_id(value: str) -> str:
 
 app = FastAPI(title="WGS-FMT Agent Workspace API", version="1.0.0")
 app.include_router(infrastructure_router, prefix="/api/backend")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+cors_origins = [value.strip() for value in os.environ.get("WGS_CORS_ORIGINS", "").split(",") if value.strip()]
+if cors_origins:
+    app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_methods=["*"], allow_headers=["*"])
 _bootstrap()
 
 
@@ -317,7 +310,7 @@ def update_workspace_settings(payload: WorkspaceSettingsPayload) -> dict[str, An
     # Destructive operations are always confirmed in the Web workspace. This
     # server-side invariant cannot be disabled by a forged browser payload.
     value["confirm_dangerous_actions"] = True
-    allowed_root = Path(os.environ.get("WGS_SANDBOX_ALLOWED_ROOT", ROOT)).resolve()
+    allowed_root = project_path(os.environ.get("WGS_SANDBOX_ALLOWED_ROOT") or workspace_root())
     workspace = Path(value["sandbox_workspace"])
     workspace = (ROOT / workspace).resolve() if not workspace.is_absolute() else workspace.resolve()
     if not workspace.is_relative_to(allowed_root):
@@ -358,7 +351,7 @@ def test_model_service(payload: ModelTestPayload) -> dict[str, Any]:
 @app.post("/api/settings/sandbox-test")
 def test_sandbox(payload: SandboxTestPayload) -> dict[str, Any]:
     config = payload.settings
-    allowed_root = Path(os.environ.get("WGS_SANDBOX_ALLOWED_ROOT", ROOT)).resolve()
+    allowed_root = project_path(os.environ.get("WGS_SANDBOX_ALLOWED_ROOT") or workspace_root())
     workspace = Path(config.sandbox_workspace)
     workspace = (ROOT / workspace).resolve() if not workspace.is_absolute() else workspace.resolve()
     if not workspace.is_relative_to(allowed_root):
@@ -556,7 +549,7 @@ def _canvas_path(value: str) -> Path:
         parts = value[len("sandbox://"):].split("/", 2)
         if len(parts) != 3 or any(not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", item) for item in parts[:2]):
             raise HTTPException(422, "Canvas 沙盒路径无效。")
-        sandbox_root = Path(os.environ.get("WGS_AGENT_SANDBOX_ROOT", "/storage/main/users/zhangrongpeng/data/fmt/wgs-fmt-agent-v2-data/sandboxes")).resolve()
+        sandbox_root = runtime_path("WGS_AGENT_SANDBOX_ROOT", "sandboxes")
         scope_root = (sandbox_root / parts[0] / parts[1]).resolve()
         path = (scope_root / parts[2]).resolve()
         try:

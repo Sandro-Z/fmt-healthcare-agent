@@ -32,6 +32,7 @@ from wgs_agent.tools.domain_tools import (
 from wgs_agent.tools.knowledge_tools import KnowledgeSearchTool, PubmedSearchTool
 from wgs_agent.tools.pipeline_runner import PipelineCheckTool, PipelineRunStepTool
 from app.local_chat import LocalChatError, base_url as configured_base_url
+from wgs_fmt_platform.paths import runner_status_path, runtime_path
 
 
 MAX_AGENT_STEPS = 6
@@ -113,13 +114,11 @@ _READ_TOOLS = {
 
 
 def _results_dir() -> Path:
-    root = Path(__file__).resolve().parents[3]
-    return Path(os.environ.get("WGS_RESULTS_DIR", root / "data" / "results")).resolve()
+    return runtime_path("WGS_RESULTS_DIR", "results")
 
 
 def _audit_path() -> Path:
-    root = Path(__file__).resolve().parents[3]
-    directory = Path(os.environ.get("WGS_AGENT_AUDIT_DIR", root / "data" / "agent-audit"))
+    directory = runtime_path("WGS_AGENT_AUDIT_DIR", "agent-audit")
     directory.mkdir(parents=True, exist_ok=True)
     return directory / f"{datetime.now(UTC):%Y-%m-%d}.jsonl"
 
@@ -131,8 +130,7 @@ def _audit(event: str, payload: dict[str, Any]) -> None:
 
 
 def _sandbox_root() -> Path:
-    default = Path("/storage/main/users/zhangrongpeng/data/fmt/wgs-fmt-agent-v2-data/sandboxes")
-    root = Path(os.environ.get("WGS_AGENT_SANDBOX_ROOT", default)).resolve()
+    root = runtime_path("WGS_AGENT_SANDBOX_ROOT", "sandboxes")
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(root, 0o700)
     return root
@@ -231,7 +229,7 @@ def _list_samples(limit: int = 30) -> dict[str, Any]:
                     samples.setdefault(path.name[: -len(suffix)], "has_results")
                     break
 
-    status_file = Path(os.environ.get("WGS_RUNNER_STATUS", "/storage/main/users/zhangrongpeng/data/fmt/postfmt_processed/status/runner_status.tsv"))
+    status_file = runner_status_path()
     if status_file.is_file():
         try:
             lines = status_file.read_text(encoding="utf-8", errors="replace").splitlines()

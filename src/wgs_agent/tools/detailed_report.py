@@ -378,7 +378,8 @@ def resolve_report_model(settings_file=None):
     import os
     if os.environ.get("WGS_REPORT_LLM_DISABLED") == "1":
         return None
-    path = Path(settings_file) if settings_file else Path(os.environ.get("WGS_AGENT_CONFIG_DIR", str(Path(__file__).resolve().parents[3] / "data" / "agent-config"))) / "workspace-settings.json"
+    from wgs_fmt_platform.paths import runtime_path
+    path = Path(settings_file) if settings_file else runtime_path("WGS_AGENT_CONFIG_DIR", "agent-config") / "workspace-settings.json"
     try:
         config = json.loads(path.read_text()).get("model_service", {})
         model = config.get("default_model") or config.get("local_model")

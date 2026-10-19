@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA_ROOT="${WGS_WORKSPACE:-/storage/main/users/zhangrongpeng/data/fmt/wgs-fmt-agent-v2-data}"
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 for name in workspace-web workspace-api agent-daemon; do
   pid_file="$DATA_ROOT/run/$name.pid"

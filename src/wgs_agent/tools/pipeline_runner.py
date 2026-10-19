@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -18,16 +19,27 @@ from typing import Any
 import pandas as pd  # noqa: F401 — 用于检查矩阵中的列
 
 from wgs_agent.core.tools.base import BaseTool, ToolResult
+from wgs_fmt_platform.paths import PROJECT_ROOT, legacy_output_root, project_path, runtime_path
 
 JSON_KEY = "---JSON---"
 
 # ============================================================================
 # 路径常量
 # ============================================================================
-_WGS_OUT = "/storage1/zhangrongpeng/fmt-data/wgs_out"
-_SAMPLES_DIR = "/storage1/zhangrongpeng/fmt-data/samples"
-_PIPELINE_BIN = "/home/zhangrongpeng/Project/WGS.FMT/pipeline/bin"
-_METABOLITE_SCRIPT = "/home/zhangrongpeng/Project/WGS.FMT/pipeline/step_metabolite_matrix.py"
+_WGS_OUT = str(legacy_output_root())
+_SAMPLES_DIR = str(runtime_path("WGS_LEGACY_SAMPLES_DIR", "samples"))
+_PIPELINE_ROOT = project_path(os.environ.get("WGS_PIPELINE_ROOT") or PROJECT_ROOT / "runtime/pipeline")
+_PIPELINE_BIN = str(_PIPELINE_ROOT / "bin")
+_METABOLITE_SCRIPT = str(_PIPELINE_ROOT / "step_metabolite_matrix.py")
+
+
+def _activation_prefix(kind: str) -> str:
+    """Use the current environment unless a local Conda activation is configured."""
+    activate = os.environ.get("WGS_CONDA_ACTIVATE", "").strip()
+    if not activate:
+        return ""
+    name = os.environ.get(f"WGS_{kind.upper()}_ENV", f"fmt-{kind}")
+    return f"source {shlex.quote(activate)} {shlex.quote(name)} && "
 
 # Pipeline 步骤定义: (步骤号, 名称, 检查路径模板, 检查方式)
 # 检查方式: "file"=检查文件是否存在, "matrix_header"=检查矩阵表头是否包含样本ID
@@ -326,8 +338,8 @@ def _run_matrix_rebuild_step(sample_id: str, step: int) -> dict[str, Any]:
     step_name = "通路映射" if step == 5 else "矩阵导出"
 
     # 使用 run_direct_step.sh 的对应步骤
-    run_direct = "/home/zhangrongpeng/Project/WGS.FMT/pipeline/run_direct_step.sh"
-    cmd = f"bash {run_direct} {step}"
+    run_direct = str(_PIPELINE_ROOT / "run_direct_step.sh")
+    cmd = f"bash {shlex.quote(run_direct)} {step}"
 
     try:
         result = subprocess.run(
@@ -369,7 +381,7 @@ def _run_metabolite_step(sample_id: str) -> dict[str, Any]:
         }
 
     cmd = (
-        f"source /home/zhangrongpeng/miniconda3/bin/activate fmt-func 2>/dev/null && "
+        _activation_prefix("func") +
         f"python {_METABOLITE_SCRIPT} "
         f"--input-file {pathway_file} "
         f"--output-file {output_file} "
@@ -427,10 +439,10 @@ def _build_step_command(step: int, sample_id: str, script_path: str) -> str:
       因此必须传 .../01_knead 根目录，不能传 .../01_knead/{sample_id}
     - 使用临时文件替代 process substitution (<(echo ...))，兼容非交互式 shell
     """
-    kneaddata_db = "/storage1/zhangrongpeng/database/kneaddata/hg_39"
-    metaphlan_db = "/storage1/zhangrongpeng/database/metaphlan4"
-    metaphlan_index = "mpa_vJan25_CHOCOPhlAnSGB_202503"
-    humann_root = "/storage1/zhangrongpeng/database/humann3"
+    kneaddata_db = str(runtime_path("WGS_KNEADDATA_DATABASE", "databases", "kneaddata", "hg_39"))
+    metaphlan_db = str(runtime_path("WGS_METAPHLAN_DATABASE", "databases", "metaphlan4"))
+    metaphlan_index = os.environ.get("WGS_METAPHLAN_INDEX", "mpa_vJan25_CHOCOPhlAnSGB_202503")
+    humann_root = str(runtime_path("WGS_HUMANN_DATABASE", "databases", "humann3"))
     humann_protein = f"{humann_root}/uniref"
     humann_nucleotide = f"{humann_root}/chocophlan"
 
@@ -443,7 +455,7 @@ def _build_step_command(step: int, sample_id: str, script_path: str) -> str:
 
     if step == 2:
         return (
-            f"source /home/zhangrongpeng/miniconda3/bin/activate fmt-tax 2>/dev/null && "
+            _activation_prefix("tax") +
             f"bash {script_path} "
             f"-i {_SAMPLES_DIR}/{sample_id} "
             f"-o {wgs_out}/01_knead "
@@ -455,7 +467,7 @@ def _build_step_command(step: int, sample_id: str, script_path: str) -> str:
         )
     elif step == 3:
         return (
-            f"source /home/zhangrongpeng/miniconda3/bin/activate fmt-tax 2>/dev/null && "
+            _activation_prefix("tax") +
             f"bash {script_path} "
             f"-i {knead_root} "
             f"-o {wgs_out}/02_classify "
@@ -471,7 +483,7 @@ def _build_step_command(step: int, sample_id: str, script_path: str) -> str:
         #   -P uniref/  (蛋白库), nucleotide 用 chocophlan/
         #   同时需要 humann_config 初始化 + export HUMANN_DB
         return (
-            f"source /home/zhangrongpeng/miniconda3/bin/activate fmt-func 2>/dev/null && "
+            _activation_prefix("func") +
             f"export HUMANN_DB='{humann_root}' && "
             f"humann_config --update database_folders protein '{humann_protein}' 2>/dev/null; "
             f"humann_config --update database_folders nucleotide '{humann_nucleotide}' 2>/dev/null; "

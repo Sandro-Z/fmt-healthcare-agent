@@ -14,9 +14,10 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 from typing import Any
+from wgs_fmt_platform.paths import knowledge_db_path
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "kb.db"
+DB_PATH = knowledge_db_path()
 
 
 class KnowledgeBaseQuery:

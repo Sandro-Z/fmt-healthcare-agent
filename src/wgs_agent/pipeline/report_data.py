@@ -11,6 +11,8 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
+from wgs_fmt_platform.paths import bioinformatics_root
+
 from wgs_agent.pipeline.report_common import (
     METAPHLAN_SPECIES_FILE, METAPHLAN_GENUS_FILE,
     PATHWAY_KNOWN_FILE, PATHWAY_CONTRIB_FILE, PATHWAY_COMBINED_FILE,
@@ -24,11 +26,7 @@ from wgs_agent.pipeline.report_common import (
 
 
 def _bioinformatics_output_root() -> Path:
-    configured = os.environ.get("WGS_BIOINFORMATICS_OUTPUT_ROOT", "").strip()
-    if configured:
-        return Path(configured)
-    workspace = Path(os.environ.get("WGS_WORKSPACE", "./data")).expanduser().resolve()
-    return workspace.parent / "postfmt_processed"
+    return bioinformatics_root()
 
 
 def _load_single_metaphlan(sample_id: str, rank: str) -> Optional[pd.Series]:

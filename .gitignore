@@ -38,3 +38,5 @@ knowledge_base/documents/papers/
 
 # Microsoft YaHei binaries are local runtime assets and are not redistributable.
 src/wgs_agent/tools/fonts/*.TTC
+
+tmp/

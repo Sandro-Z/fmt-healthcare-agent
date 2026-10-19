@@ -21,12 +21,13 @@ from datetime import datetime as _dt
 from typing import Any
 
 import jinja2
+from wgs_fmt_platform.paths import runtime_path
 
 # ── 配置 ─────────────────────────────────────────────────────────────
 
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 _TEMPLATES_DIR = os.path.join(_CURRENT_DIR, "templates")
-_DEFAULT_OUTPUT_DIR = "/storage1/zhangrongpeng/fmt-data/output/reports"
+_DEFAULT_OUTPUT_DIR = str(runtime_path("WGS_RESULTS_DIR", "results"))
 
 # xelatex 路径（texlive 用户目录安装）
 _LATEX_ENGINE = os.path.expanduser("~/texlive/2026/bin/x86_64-linux/xelatex")

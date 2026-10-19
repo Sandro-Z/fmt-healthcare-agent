@@ -49,7 +49,9 @@ from drug_metabolite_knowledge_base import DrugMicrobiomeKB, export_knowledge_ba
 # 配置
 # ============================================================================
 
-DATA_DIR = "/storage1/zhangrongpeng/fmt-data/wgs_out"
+from wgs_fmt_platform.paths import legacy_output_root
+
+DATA_DIR = str(legacy_output_root())
 METABOLITE_FILE = os.path.join(DATA_DIR, "06_metabolite", "metabolite_content_matrix.tsv")
 PATHWAY_FILE = os.path.join(DATA_DIR, "04_pathway", "pathway_abundance_known.tsv")
 SUMMARY_FILE = os.path.join(DATA_DIR, "06_metabolite", "metabolite_content_matrix_summary.tsv")

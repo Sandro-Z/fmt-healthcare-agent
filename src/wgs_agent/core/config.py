@@ -7,16 +7,17 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+from wgs_fmt_platform.paths import PROJECT_ROOT, runtime_path
 
 _DEFAULT_HOST = "127.0.0.1"
-_DEFAULT_PORT = 7437
+_DEFAULT_PORT = 7438
 _DEFAULT_LOG_LEVEL = "INFO"
-_DEFAULT_LOG_FILE = "~/.wgs_agent/logs/core.log"
+_DEFAULT_LOG_FILE = str(runtime_path("WGS_LOG_FILE", "logs", "agent-core.log"))
 _DEFAULT_LOG_FORMAT = "text"
-_DEFAULT_CONFIG_PATH = "~/.wgs_agent/config.toml"
+_DEFAULT_CONFIG_PATH = str(runtime_path("WGS_CONFIG", "config.toml"))
 _DEFAULT_MAX_STEPS = 50
 _DEFAULT_MODEL = "claude-sonnet-4-6"
-_DEFAULT_TRACE_FILE = "~/.wgs_agent/traces/daemon.jsonl"
+_DEFAULT_TRACE_FILE = str(runtime_path("WGS_TRACE_FILE", "traces", "daemon.jsonl"))
 
 
 @dataclass
@@ -91,7 +92,7 @@ def get_config() -> WgsConfig:
     config = WgsConfig()
 
     # .env 必须在读取 WGS_CONFIG 之前加载，以便 .env 中的 WGS_CONFIG 能影响 TOML 路径
-    load_dotenv(".env", override=False)
+    load_dotenv(PROJECT_ROOT / ".env", override=False)
 
     # 若显式指定 WGS_CONFIG，只读该文件；否则按优先级叠加：全局 → 项目本地
     explicit = os.environ.get("WGS_CONFIG")
@@ -100,7 +101,7 @@ def get_config() -> WgsConfig:
     else:
         config_paths = [
             Path(_DEFAULT_CONFIG_PATH).expanduser(),
-            Path(".wgs_agent/config.toml"),
+            PROJECT_ROOT / ".wgs_agent/config.toml",
         ]
 
     for config_path in config_paths:

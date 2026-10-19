@@ -31,27 +31,11 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from wgs_fmt_platform.paths import PROJECT_ROOT, bioinformatics_root, project_path, runtime_path
 
 def _find_fmt_matching_dir() -> str:
-    """定位兄弟项目 WGS.FMT/new_FMT_Matching，兼容不同 checkout 根目录。"""
-    env_dir = os.environ.get("WGS_FMT_MATCHING_DIR", "").strip()
-    if env_dir:
-        return os.path.abspath(env_dir)
-
-    current = os.path.abspath(__file__)
-    probe = os.path.dirname(current)
-    candidates = []
-    while True:
-        candidates.append(os.path.join(probe, "WGS.FMT", "new_FMT_Matching"))
-        next_probe = os.path.dirname(probe)
-        if next_probe == probe:
-            break
-        probe = next_probe
-
-    for candidate in candidates:
-        if os.path.isdir(candidate):
-            return candidate
-    return candidates[0]
+    """Only use the configured local compatibility pipeline; never scan other projects."""
+    return str(runtime_path("WGS_FMT_MATCHING_DIR", "fmt-matching"))
 
 
 # 将 WGS.FMT/new_FMT_Matching 加入 sys.path 以便导入其模块
@@ -95,33 +79,14 @@ R_SCRIPT = os.path.join(_FMT_SCRIPT_DIR, "run_zippca_mbdenoise.r")
 # Current in-project triplet model.  The legacy R/PyTorch pipeline below remains
 # available as a compatibility fallback, but online inference must prefer this
 # self-contained artifact so reports do not silently lose donor ranking.
-_AGENT_ROOT = Path(__file__).resolve().parents[3]
-_FMT_ROOT = _AGENT_ROOT.parent.parent
-TRIPLET_MODEL_DIR = Path(
-    os.environ.get(
-        "WGS_FMT_TRIPLET_MODEL_DIR",
-        _AGENT_ROOT / "data/model-training/fmt-triplet-v1",
-    )
-)
-TRIPLET_PREDICTOR_SCRIPT = Path(
-    os.environ.get(
-        "WGS_FMT_TRIPLET_PREDICTOR",
-        _AGENT_ROOT / "scripts/predict_fmt_triplet_model.py",
-    )
-)
-TRIPLET_BASELINE_SPECIES = Path(
-    os.environ.get("WGS_FMT_BASELINE_SPECIES", _FMT_ROOT / "species_abundance_train.csv")
-)
-TRIPLET_MATCH_FILE = Path(os.environ.get("WGS_FMT_MATCH_FILE", _FMT_ROOT / "match.xlsx"))
-TRIPLET_POST_SPECIES = Path(
-    os.environ.get(
-        "WGS_FMT_POST_SPECIES",
-        _FMT_ROOT / "postfmt_processed/matrices/species_relative_abundance_percent.tsv",
-    )
-)
-TRIPLET_PROFILE_DIR = Path(
-    os.environ.get("WGS_FMT_PROFILE_DIR", _FMT_ROOT / "postfmt_processed/profiles/metaphlan")
-)
+_AGENT_ROOT = PROJECT_ROOT
+_FMT_ROOT = runtime_path("WGS_FMT_DATA_ROOT", "fmt")
+TRIPLET_MODEL_DIR = runtime_path("WGS_FMT_TRIPLET_MODEL_DIR", "model-training", "fmt-triplet-v1")
+TRIPLET_PREDICTOR_SCRIPT = project_path(os.environ.get("WGS_FMT_TRIPLET_PREDICTOR") or _AGENT_ROOT / "scripts/predict_fmt_triplet_model.py")
+TRIPLET_BASELINE_SPECIES = project_path(os.environ.get("WGS_FMT_BASELINE_SPECIES") or _FMT_ROOT / "species_abundance_train.csv")
+TRIPLET_MATCH_FILE = project_path(os.environ.get("WGS_FMT_MATCH_FILE") or _FMT_ROOT / "match.xlsx")
+TRIPLET_POST_SPECIES = project_path(os.environ.get("WGS_FMT_POST_SPECIES") or bioinformatics_root() / "matrices/species_relative_abundance_percent.tsv")
+TRIPLET_PROFILE_DIR = project_path(os.environ.get("WGS_FMT_PROFILE_DIR") or bioinformatics_root() / "profiles/metaphlan")
 
 _triplet_module = None
 

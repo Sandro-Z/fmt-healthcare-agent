@@ -11,6 +11,7 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from wgs_fmt_platform.paths import runtime_path
 
 from wgs_agent.core.config import WgsConfig
 from wgs_agent.core.context import ExecutionContext
@@ -50,7 +51,7 @@ class AgentRunner:
         self._bus = bus or EventBus()
         self._provider = provider
         self._extra_handlers: list[EventHandler] = extra_handlers or []
-        self._runs_dir = runs_dir or Path.home() / ".wgs_agent" / "runs"
+        self._runs_dir = runs_dir or runtime_path("WGS_RUNS_DIR", "runs")
 
     def _build_registry(self) -> ToolRegistry:
         """构建工具注册表 — 注册所有 WGS 分析 + 知识检索 + 自我审查工具"""

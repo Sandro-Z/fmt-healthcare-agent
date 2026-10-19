@@ -1,9 +1,9 @@
 # FMT triplet model inference
 
-Model directory:
+Model directory (empty on a fresh server; train or install the model separately):
 
 ```text
-data/model-training/fmt-triplet-v1
+var/model-training/fmt-triplet-v1
 ```
 
 The input table must have sample IDs in rows and species in columns. Species may use either `s__Species_name` or full MetaPhlAn taxonomy strings. Values may be percentages, fractions, or counts.
@@ -12,7 +12,7 @@ The input table must have sample IDs in rows and species in columns. Species may
 
 ```bash
 python scripts/predict_fmt_triplet_model.py \
-  --model-dir data/model-training/fmt-triplet-v1 \
+  --model-dir var/model-training/fmt-triplet-v1 \
   embed \
   --samples new_species.tsv \
   --unit percent \
@@ -23,7 +23,7 @@ python scripts/predict_fmt_triplet_model.py \
 
 ```bash
 python scripts/predict_fmt_triplet_model.py \
-  --model-dir data/model-training/fmt-triplet-v1 \
+  --model-dir var/model-training/fmt-triplet-v1 \
   rank \
   --recipient recipient_species.tsv \
   --donors donor_species.tsv \
@@ -38,7 +38,7 @@ Recipient, donor, and post-FMT tables must have the same row count and correspon
 
 ```bash
 python scripts/predict_fmt_triplet_model.py \
-  --model-dir data/model-training/fmt-triplet-v1 \
+  --model-dir var/model-training/fmt-triplet-v1 \
   response \
   --recipient recipient_species.tsv \
   --donor donor_species.tsv \

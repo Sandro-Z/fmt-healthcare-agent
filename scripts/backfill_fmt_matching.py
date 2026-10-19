@@ -30,7 +30,8 @@ def _atomic_write(path: Path, data: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--results-dir", default="data/results")
+    from wgs_fmt_platform.paths import runtime_path
+    parser.add_argument("--results-dir", default=str(runtime_path("WGS_RESULTS_DIR", "results")))
     parser.add_argument("--sample", action="append", help="Only backfill this sample ID; repeatable")
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--force", action="store_true", help="Recompute records that already have status=ok")

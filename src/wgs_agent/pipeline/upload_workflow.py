@@ -20,6 +20,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, BinaryIO
 
+from wgs_fmt_platform.paths import PROJECT_ROOT, bioinformatics_root, project_path, runtime_path, workspace_root
+
 
 _SAMPLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
 _FASTQ_SUFFIXES = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
@@ -40,21 +42,13 @@ class UploadWorkflowSettings:
 
     @classmethod
     def from_env(cls) -> "UploadWorkflowSettings":
-        workspace = Path(os.environ.get("WGS_WORKSPACE", "./data")).expanduser().resolve()
-        platform_root = workspace.parent
+        workspace = workspace_root()
         return cls(
             workspace=workspace,
-            upload_root=Path(os.environ.get("WGS_UPLOAD_ROOT", workspace / "uploads")),
-            job_root=Path(os.environ.get("WGS_UPLOAD_JOB_ROOT", workspace / "upload-jobs")),
-            output_root=Path(
-                os.environ.get("WGS_BIOINFORMATICS_OUTPUT_ROOT", platform_root / "postfmt_processed")
-            ),
-            worker=Path(
-                os.environ.get(
-                    "WGS_BIOINFORMATICS_WORKER",
-                    platform_root / "runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh",
-                )
-            ),
+            upload_root=runtime_path("WGS_UPLOAD_ROOT", "uploads"),
+            job_root=runtime_path("WGS_UPLOAD_JOB_ROOT", "upload-jobs"),
+            output_root=bioinformatics_root(),
+            worker=project_path(os.environ.get("WGS_BIOINFORMATICS_WORKER") or PROJECT_ROOT / "runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh"),
             threads=max(1, int(os.environ.get("WGS_UPLOAD_THREADS", "4"))),
         )
 

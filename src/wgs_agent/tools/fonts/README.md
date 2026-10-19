@@ -9,7 +9,7 @@ PDF 报告生成（fpdf2）需要中文字体才能正确渲染汉字。
 sudo apt install -y fonts-wqy-microhei
 
 # 方式 2：手动下载 Noto Sans SC 放到此目录
-cd /home/zhangrongpeng/Project/WGS-FMT-Agent/src/wgs_agent/tools/fonts
+cd src/wgs_agent/tools/fonts
 wget https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf \
   -O NotoSansSC.ttf
 ```

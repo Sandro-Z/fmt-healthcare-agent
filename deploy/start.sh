@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${WGS_APP_ROOT:-/storage/main/users/zhangrongpeng/data/fmt/apps/WGS-FMT-Agent-v2}"
-ENV_ROOT="${WGS_ENV_ROOT:-/storage/main/users/zhangrongpeng/data/fmt/runtime/envs/wgs-fmt-agent-v2}"
-DATA_ROOT="${WGS_WORKSPACE:-/storage/main/users/zhangrongpeng/data/fmt/wgs-fmt-agent-v2-data}"
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-cd "$ROOT"
-if [[ -f .env ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
+if [[ ! -x "$WGS_ENV_ROOT/bin/python" || ! -x "$ROOT/apps/workspace-web/node_modules/.bin/next" || ! -f "$ROOT/apps/workspace-web/.next/BUILD_ID" ]]; then
+  echo "Install Python/Web dependencies and build the Web app before starting." >&2
+  exit 2
 fi
+"$WGS_ENV_ROOT/bin/python" - "$ROOT/apps/workspace-web/.next/routes-manifest.json" "$WGS_API_PORT" <<'PY'
+import json
+import sys
 
-mkdir -p "$DATA_ROOT/logs" "$DATA_ROOT/run" "$DATA_ROOT/results" \
-  "$DATA_ROOT/traces" "$DATA_ROOT/knowledge-index"
+with open(sys.argv[1], encoding="utf-8") as handle:
+    rewrites = json.load(handle)["rewrites"]
+routes = rewrites if isinstance(rewrites, list) else [route for group in rewrites.values() for route in group]
+expected = f"http://127.0.0.1:{int(sys.argv[2])}/:path*"
+if not any(route.get("source") == "/backend/:path*" and route.get("destination") == expected for route in routes):
+    raise SystemExit("API port differs from the Web build; rebuild the Web app before starting.")
+PY
+umask 077
+"$WGS_ENV_ROOT/bin/python" "$ROOT/scripts/init_data.py"
 
 start_service() {
   local name="$1"
@@ -30,15 +35,15 @@ start_service() {
   echo "$name started: PID $!"
 }
 
-start_service workspace-api "$ENV_ROOT/bin/python" -m uvicorn app.main:app \
-  --app-dir "$ROOT/apps/workspace-api" --host 0.0.0.0 --port 8503
+start_service workspace-api "$WGS_ENV_ROOT/bin/python" -m uvicorn app.main:app \
+  --app-dir "$ROOT/apps/workspace-api" --host 127.0.0.1 --port "$WGS_API_PORT"
 start_service workspace-web "$ROOT/apps/workspace-web/node_modules/.bin/next" \
-  start "$ROOT/apps/workspace-web" -p 8502 -H 0.0.0.0
-
-bash "$ROOT/deploy/restore-reverse-tunnels.sh"
+  start "$ROOT/apps/workspace-web" -p "$WGS_WEB_PORT" -H "$WGS_WEB_HOST"
 
 if [[ -n "${DEEPSEEK_API_KEY:-}" || -n "${ANTHROPIC_API_KEY:-}" ]]; then
-  start_service agent-daemon "$ENV_ROOT/bin/wgs-agent" daemon --host 127.0.0.1 --port 7438
+  start_service agent-daemon "$WGS_ENV_ROOT/bin/wgs-agent" daemon --host 127.0.0.1 --port "$WGS_PORT"
 else
   echo "agent-daemon skipped: configure DEEPSEEK_API_KEY or ANTHROPIC_API_KEY"
 fi
+
+echo "Workspace URL: http://<server-ip>:$WGS_WEB_PORT/"

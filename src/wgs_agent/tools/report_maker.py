@@ -256,8 +256,8 @@ def build_full_report(
 #                     # pandoc tex 转换失败，用自定义简易 preamble
 #                     preamble = r"""\documentclass[11pt,a4paper]{ctexart}
 # \usepackage{fontspec}
-# \setmainfont{Noto Sans CJK SC}[Path=/home/zhangrongpeng/.fonts/,Extension=.otf,UprightFont=noto-cjk]
-# \setsansfont{Noto Sans CJK SC}[Path=/home/zhangrongpeng/.fonts/,Extension=.otf,UprightFont=noto-cjk]
+# \setmainfont{Noto Sans CJK SC}
+# \setsansfont{Noto Sans CJK SC}
 # \usepackage[dvipsnames,svgnames,table]{xcolor}
 # \usepackage{geometry}\geometry{a4paper,left=22mm,right=22mm,top=25mm,bottom=25mm}
 # \usepackage{longtable,booktabs,array,multirow,graphicx,tikz}
@@ -670,8 +670,8 @@ def generate_pdf(report_md: str, sample_id: str, output_path: str) -> str:
     # 步骤 2: 包裹进 WGS.FMT 定制 preamble
     preamble = r"""\documentclass[11pt,a4paper,UTF8,headings=small]{ctexart}
 \usepackage{fontspec}
-\setmainfont{Noto Sans CJK SC}[Path=/home/zhangrongpeng/.fonts/,Extension=.otf,UprightFont=noto-cjk,BoldFont=noto-cjk]
-\setsansfont{Noto Sans CJK SC}[Path=/home/zhangrongpeng/.fonts/,Extension=.otf,UprightFont=noto-cjk,BoldFont=noto-cjk]
+\setmainfont{Noto Sans CJK SC}
+\setsansfont{Noto Sans CJK SC}
 \usepackage[a4paper,left=22mm,right=22mm,top=25mm,bottom=25mm,headheight=22pt,headsep=8mm,footskip=12mm]{geometry}
 \usepackage[dvipsnames,svgnames,table]{xcolor}
 \definecolor{WgsBlue}{RGB}{25, 60, 120}

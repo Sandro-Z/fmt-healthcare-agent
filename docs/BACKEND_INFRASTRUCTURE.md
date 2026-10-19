@@ -2,17 +2,18 @@
 
 ## Components
 
-- MySQL 8.4: users, conversations, messages, memory metadata, and audit records.
+- Local SQLite (`var/db/wgs_agent.db`): users, conversations, messages, memory metadata, and audit records. MySQL is an explicit optional alternative via `WGS_DATABASE_URL`.
 - Redis: short-term memory with TTL and long-term memory with an optional TTL.
 - Elasticsearch: BM25 keyword search and dense-vector kNN search.
 - LitKG Claim API: relationship-graph evidence. Results are fused with Elasticsearch by reciprocal rank fusion (RRF).
 
 ## Configuration
 
-Copy `.env.example` to `.env` and replace every `change-me` value before deployment. Important variables:
+Copy `.env.example` to `.env`. Single-server defaults use loopback service addresses. Important variables:
 
 ```text
-WGS_MYSQL_URL
+WGS_WORKSPACE
+WGS_DATABASE_URL
 WGS_REDIS_URL
 WGS_ELASTICSEARCH_URL
 WGS_ELASTICSEARCH_INDEX
@@ -24,21 +25,18 @@ WGS_GRAPH_TEXT_SEARCH_PATH
 
 The embedding dimension is part of the Elasticsearch index mapping. Changing it requires creating a new index or reindexing existing documents.
 
-## Start services
+## Initialize local data without starting services
 
-On a Docker-enabled host:
-
-```bash
-docker compose -f deploy/docker-compose.yml up -d mysql redis elasticsearch
-```
-
-Install the backend dependencies and initialize the SQLAlchemy schema and Elasticsearch index:
+Install the backend dependencies and initialize local SQLite schemas:
 
 ```bash
 pip install -e '.[infra]'
-curl -X POST http://127.0.0.1:8503/api/backend/schema/initialize
-curl http://127.0.0.1:8503/api/backend/health
+python scripts/init_data.py
 ```
+
+This does not start MySQL, Redis, Elasticsearch, LitKG, Web, or API services. Optional
+services and their indexes must be prepared separately on the same server. See
+[single-server architecture](SINGLE_SERVER.md) for the later application startup.
 
 ## API
 
@@ -53,7 +51,7 @@ POST /api/backend/knowledge/index
 POST /api/backend/knowledge/search
 ```
 
-The platform API exposes the same router under `/v1/backend`.
+The browser accesses these routes through `http://<server-ip>:8502/backend/api/backend/*`.
 
 ## Search flow
 

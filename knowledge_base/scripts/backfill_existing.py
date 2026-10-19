@@ -5,10 +5,12 @@ import json
 import sqlite3
 import sys
 from pathlib import Path
+from wgs_fmt_platform.paths import knowledge_db_path, runtime_path
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "kb.db"
-INDEX_PATH = ROOT / "documents" / "papers" / "_index.json"
+DB_PATH = knowledge_db_path()
+DOCUMENTS_DIR = runtime_path("WGS_KB_DIR", "knowledge", "documents")
+INDEX_PATH = DOCUMENTS_DIR / "papers" / "_index.json"
 
 
 def get_all_pmids(index_path: Path = INDEX_PATH) -> list[str]:
@@ -25,7 +27,7 @@ def get_all_pmids(index_path: Path = INDEX_PATH) -> list[str]:
 
 def markdown_to_db(conn: sqlite3.Connection):
     """从现有 Markdown 文件补充元数据（无需重新调用 PubMed API）"""
-    papers_dir = ROOT / "documents" / "papers"
+    papers_dir = DOCUMENTS_DIR / "papers"
     markdown_files = list(papers_dir.glob("**/*.md"))
 
     updated = 0

@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from wgs_agent.core.tools.base import BaseTool, ToolResult
+from wgs_fmt_platform.paths import runtime_path
 
 JSON_KEY = "---JSON---"
 
@@ -59,9 +60,7 @@ class FmtMatchingTool(BaseTool):
                 )
 
             # 输出目录
-            from pathlib import Path
-            _ROOT = Path(__file__).resolve().parents[3]
-            out_dir = str(_ROOT / "data" / "results")
+            out_dir = str(runtime_path("WGS_RESULTS_DIR", "results"))
 
             # 如果强制重训，删除模型缓存
             if force_retrain:

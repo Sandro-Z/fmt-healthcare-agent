@@ -34,9 +34,10 @@ import pandas as pd
 import requests
 
 # ── 路径配置 ──
-ROOT = Path(__file__).resolve().parents[2]  # WGS-FMT-Agent
-REF_DIR = ROOT / "src" / "data" / "reference"
-CACHE_DIR = ROOT / "src" / "data" / "public_reference_cache"
+from wgs_fmt_platform.paths import runtime_path
+
+REF_DIR = runtime_path("WGS_REFERENCE_DIR", "reference")
+CACHE_DIR = runtime_path("WGS_REFERENCE_CACHE_DIR", "cache", "public-reference")
 
 # ── curatedMetagenomicData 资源 URL ──
 # 样本元数据 (包含 health status)
