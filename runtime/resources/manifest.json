@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "resource_set": "wgs-fmt-shotgun-v1",
+  "description": "Runtime resources required by the bundled post-FMT shotgun pipeline.",
+  "estimated_total_size_gib": 113,
+  "components": [
+    {
+      "name": "fmt-tax",
+      "kind": "conda-environment",
+      "path": "runtime/envs/fmt-tax",
+      "required": [
+        "runtime/envs/fmt-tax/bin/fastp",
+        "runtime/envs/fmt-tax/bin/kneaddata",
+        "runtime/envs/fmt-tax/bin/metaphlan",
+        "runtime/envs/fmt-tax/bin/pigz"
+      ]
+    },
+    {
+      "name": "fmt-func",
+      "kind": "conda-environment",
+      "path": "runtime/envs/fmt-func",
+      "required": [
+        "runtime/envs/fmt-func/bin/humann",
+        "runtime/envs/fmt-func/bin/humann_renorm_table"
+      ]
+    },
+    {
+      "name": "kneaddata",
+      "kind": "reference-database",
+      "path": "databases/kneaddata",
+      "estimated_size_gib": 4.1,
+      "required": ["databases/kneaddata/hg_39/hg_39.1.bt2"]
+    },
+    {
+      "name": "metaphlan4",
+      "kind": "reference-database",
+      "path": "databases/metaphlan4",
+      "estimated_size_gib": 34,
+      "required": ["databases/metaphlan4/mpa_vJan25_CHOCOPhlAnSGB_202503.pkl"]
+    },
+    {
+      "name": "metaphlan4-vjun23",
+      "kind": "reference-database",
+      "path": "databases/metaphlan4_vJun23",
+      "estimated_size_gib": 23,
+      "required": ["databases/metaphlan4_vJun23/mpa_vJun23_CHOCOPhlAnSGB_202307.pkl"]
+    },
+    {
+      "name": "humann3",
+      "kind": "reference-database",
+      "path": "databases/humann3",
+      "estimated_size_gib": 52,
+      "required": [
+        "databases/humann3/chocophlan",
+        "databases/humann3/uniref/uniref90_201901b_full.dmnd",
+        "databases/humann3/utility_mapping/map_ko_uniref90.txt.gz"
+      ]
+    },
+    {
+      "name": "fmt-triplet-v1",
+      "kind": "trained-model",
+      "path": "models/fmt-triplet-v1",
+      "sensitivity": "derived-research-artifact",
+      "required": [
+        "models/fmt-triplet-v1/feature_schema.json",
+        "models/fmt-triplet-v1/fmt_triplet_contrastive_model.npz",
+        "models/fmt-triplet-v1/model_manifest.json"
+      ]
+    },
+    {
+      "name": "fmt-matching-data",
+      "kind": "restricted-derived-dataset",
+      "path": "data/fmt-matching",
+      "sensitivity": "review-before-transfer-do-not-publish",
+      "required": [
+        "data/fmt-matching/species_abundance_train.csv",
+        "data/fmt-matching/match.xlsx"
+      ]
+    }
+  ]
+}

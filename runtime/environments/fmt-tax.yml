@@ -1,0 +1,12 @@
+name: fmt-tax
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - python=3.10.19
+  - fastp=0.23.4
+  - kneaddata=0.12.3
+  - metaphlan=4.2.4
+  - pigz=2.8
+  - bowtie2=2.5.4
+  - trimmomatic=0.39

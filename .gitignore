@@ -13,6 +13,11 @@ htmlcov/
 var/
 dist/
 build/
+runtime/envs/
+databases/
+resource-bundles/
+*.tar.zst
+*.conda
 apps/workspace-web/.next/
 apps/workspace-web/node_modules/
 apps/workspace-web/npm-debug.log*

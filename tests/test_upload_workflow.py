@@ -53,3 +53,16 @@ def test_unknown_sample_is_not_submitted(tmp_path: Path) -> None:
     status = get_workflow_status("FMT_002", settings=_settings(tmp_path))
     assert status["state"] == "not_submitted"
     assert status["progress"] == 0
+
+
+def test_default_worker_is_bundled_with_project(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WGS_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.delenv("WGS_BIOINFORMATICS_WORKER", raising=False)
+
+    settings = UploadWorkflowSettings.from_env()
+
+    assert settings.worker.name == "process_postfmt_sample.sh"
+    assert settings.worker.parent.name == "postfmt_pipeline"
+    assert settings.worker.is_file()
