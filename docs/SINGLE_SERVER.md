@@ -69,8 +69,12 @@ Redis 和 LitKG 仍需单独启动。Elasticsearch 在运行 `deploy/start.sh` �
 
 生信 worker 默认路径为项目内的
 `runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh`，兼容流程脚本默认位于
-`runtime/pipeline/`。仓库不包含这些外部工具、参考库和训练模型；缺失时分析功能会明确
+`runtime/pipeline/`。单样本 Worker 已包含在仓库内，所需分析环境、外部工具、参考库和
+训练模型需另行安装或恢复；缺失时分析功能会明确
 返回不可用状态，不会自动读取其他项目目录。可通过 `.env.example` 中的变量指定本机安装位置。
+恢复资源包后，设置 `WGS_FMT_RESOURCE_ROOT`（或 `FMT_ROOT`）即可识别其中的
+`models/fmt-triplet-v1` 和 `data/fmt-matching/`，单项路径覆盖配置仍优先。
+迁移步骤见 [README](../README.md#迁移生信运行资源)。
 
 ## 后续启动
 

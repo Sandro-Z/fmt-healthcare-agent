@@ -1,12 +1,101 @@
 from pathlib import Path
 import json
+import runpy
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from wgs_agent.pipeline import report_fmt_matching as matching
 from wgs_agent.pipeline.report_fmt_matching import run_fmt_pipeline
 from wgs_agent.tools.report_maker import build_full_report
+
+
+@pytest.fixture
+def clean_triplet_env(monkeypatch, tmp_path):
+    for name in (
+        "WGS_FMT_RESOURCE_ROOT", "FMT_ROOT", "WGS_FMT_DATA_ROOT",
+        "WGS_FMT_TRIPLET_MODEL_DIR", "WGS_FMT_BASELINE_SPECIES", "WGS_FMT_MATCH_FILE",
+        "WGS_FMT_POST_SPECIES", "WGS_FMT_PROFILE_DIR", "WGS_BIOINFORMATICS_OUTPUT_ROOT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    workspace = tmp_path / "workspace"
+    monkeypatch.setenv("WGS_WORKSPACE", str(workspace))
+    return workspace
+
+
+@pytest.mark.parametrize("root_variable", ["WGS_FMT_RESOURCE_ROOT", "FMT_ROOT"])
+@pytest.mark.parametrize("portable_exists", [True, False])
+def test_triplet_resources_follow_portable_root(
+    clean_triplet_env, monkeypatch, tmp_path, root_variable, portable_exists
+):
+    workspace = clean_triplet_env
+    resources = tmp_path / "resources"
+    monkeypatch.setenv(root_variable, str(resources))
+    monkeypatch.chdir(tmp_path)
+    local = {
+        "TRIPLET_MODEL_DIR": workspace / "model-training/fmt-triplet-v1",
+        "TRIPLET_BASELINE_SPECIES": workspace / "fmt/species_abundance_train.csv",
+        "TRIPLET_MATCH_FILE": workspace / "fmt/match.xlsx",
+    }
+    portable = {
+        "TRIPLET_MODEL_DIR": resources / "models/fmt-triplet-v1",
+        "TRIPLET_BASELINE_SPECIES": resources / "data/fmt-matching/species_abundance_train.csv",
+        "TRIPLET_MATCH_FILE": resources / "data/fmt-matching/match.xlsx",
+    }
+    for paths in ([local, portable] if portable_exists else [local]):
+        for name, path in paths.items():
+            if name == "TRIPLET_MODEL_DIR":
+                path.mkdir(parents=True)
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+
+    resolved = runpy.run_path(matching.__file__)
+
+    assert resolved["_RESOURCE_ROOT"] == resources
+    for name, path in (portable if portable_exists else local).items():
+        assert resolved[name] == path
+    assert resolved["TRIPLET_POST_SPECIES"] == (
+        workspace / "bioinformatics/matrices/species_relative_abundance_percent.tsv"
+    )
+    assert resolved["TRIPLET_PROFILE_DIR"] == workspace / "bioinformatics/profiles/metaphlan"
+
+
+def test_triplet_resources_keep_fresh_workspace_defaults(clean_triplet_env, monkeypatch, tmp_path):
+    workspace = clean_triplet_env
+    monkeypatch.chdir(tmp_path)
+
+    resolved = runpy.run_path(matching.__file__)
+
+    assert resolved["TRIPLET_MODEL_DIR"] == workspace / "model-training/fmt-triplet-v1"
+    assert resolved["TRIPLET_BASELINE_SPECIES"] == workspace / "fmt/species_abundance_train.csv"
+    assert resolved["TRIPLET_MATCH_FILE"] == workspace / "fmt/match.xlsx"
+
+
+def test_triplet_resource_overrides_take_precedence(clean_triplet_env, monkeypatch, tmp_path):
+    resources = tmp_path / "resources"
+    (resources / "models/fmt-triplet-v1").mkdir(parents=True)
+    monkeypatch.setenv("WGS_FMT_RESOURCE_ROOT", str(resources))
+    overrides = {
+        "WGS_FMT_TRIPLET_MODEL_DIR": ("TRIPLET_MODEL_DIR", "custom-model"),
+        "WGS_FMT_BASELINE_SPECIES": ("TRIPLET_BASELINE_SPECIES", "custom-baseline.csv"),
+        "WGS_FMT_MATCH_FILE": ("TRIPLET_MATCH_FILE", "custom-match.xlsx"),
+    }
+    for variable, (_, value) in overrides.items():
+        monkeypatch.setenv(variable, value)
+    output_root = tmp_path / "analysis-output"
+    monkeypatch.setenv("WGS_BIOINFORMATICS_OUTPUT_ROOT", str(output_root))
+    monkeypatch.chdir(tmp_path)
+
+    resolved = runpy.run_path(matching.__file__)
+
+    for name, value in overrides.values():
+        assert resolved[name] == matching.PROJECT_ROOT / value
+    assert resolved["TRIPLET_POST_SPECIES"] == (
+        output_root / "matrices/species_relative_abundance_percent.tsv"
+    )
+    assert resolved["TRIPLET_PROFILE_DIR"] == output_root / "profiles/metaphlan"
 
 
 def test_triplet_pipeline_returns_ranked_donors(tmp_path: Path, monkeypatch):

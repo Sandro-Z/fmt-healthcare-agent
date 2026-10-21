@@ -22,6 +22,10 @@ deploy/
   stop.sh                 停止当前系统
   status.sh               查看状态
   common.sh               统一读取环境与本机路径
+runtime/
+  scripts/                可迁移的宏基因组分析 Worker
+  environments/           MetaPhlAn/HUMAnN 精确环境定义
+  resources/              大型资源清单与迁移说明
 var/                      单服务器运行数据（不提交 Git）
 datasets/                 评测数据集
 knowledge_base/           本地知识资源
@@ -36,6 +40,32 @@ tests/                    共享 Python 单元与集成测试
 Git 仓库仅保存源码、测试、文档和配置模板。`.env`、数据库、样本、报告、审计日志、
 模型产物、下载文献、向量索引及字体二进制均由 `.gitignore` 排除。中文 PDF 字体的本地
 安装方式见 `src/wgs_agent/tools/fonts/README.md`。
+
+## 迁移生信运行资源
+
+仓库包含分析 Worker、环境版本、资源清单以及在线重建和离线迁移脚本。参考数据库和
+Conda 环境合计约 113 GiB，不进入普通 Git；它们以带 SHA-256 校验的分组件资源包迁移。
+
+```bash
+# 源服务器：制作离线资源包
+export FMT_ROOT=/path/to/source-resources
+bash deploy/package-bioinformatics-runtime.sh /path/to/resource-bundles/wgs-fmt-shotgun-v1
+
+# 目标服务器：克隆仓库后恢复资源
+export FMT_ROOT=/srv/wgs-fmt
+bash deploy/restore-bioinformatics-runtime.sh /path/to/resource-bundles/wgs-fmt-shotgun-v1
+bash deploy/check-bioinformatics-runtime.sh
+```
+
+在目标服务器的 `.env` 中按 `.env.example` 配置 `FMT_ROOT`、`WGS_FMT_RESOURCE_ROOT`、
+`ENV_ROOT` 和 `DB_ROOT`，再按下文准备应用依赖。应用会优先读取资源包中的
+`models/fmt-triplet-v1` 和 `data/fmt-matching/`；显式指定的单项路径优先。未恢复资源时，
+仍使用单服务器的 `var/model-training/` 和 `var/fmt/` 默认布局，分析结果仍由
+`WGS_BIOINFORMATICS_OUTPUT_ROOT` 控制。
+
+若目标服务器可联网，可运行 `bash deploy/install-bioinformatics-envs.sh` 重建分析环境，
+再从官方来源安装参考数据库。完整清单、迁移依赖和受限配型数据的处理要求见
+[`runtime/resources/README.md`](runtime/resources/README.md)。
 
 ## 单服务器准备（不启动服务）
 
@@ -55,7 +85,8 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
 初始化只创建目录和本地 SQLite 表，不启动 Web、API、数据库服务器或 SSH 隧道。
-样本、报告和知识文献初始为空。参考数据库、FMT 模型及生信 worker 需要另行准备。
+样本、报告和知识文献初始为空。生信 Worker 已包含在仓库内；分析环境、参考数据库和
+FMT 模型需要另行准备或从资源包恢复。
 
 ## 以后部署时启动与停止
 
