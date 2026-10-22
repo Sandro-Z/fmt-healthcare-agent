@@ -21,9 +21,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[2]  # WGS-FMT-Agent
-WGS_FMT_ROOT = Path.home() / "Project" / "WGS.FMT"
-REF_DIR = ROOT / "data" / "reference"
+from wgs_fmt_platform.paths import runtime_path
+
+WGS_FMT_ROOT = runtime_path("WGS_FMT_MATCHING_DIR", "fmt-matching")
+REF_DIR = runtime_path("WGS_REFERENCE_DIR", "reference")
 
 
 def build_species_reference(
@@ -183,7 +184,7 @@ def main():
     print("=" * 60)
 
     # ── 物种参考范围 ──
-    species_matrix = WGS_FMT_ROOT / "new_FMT_Matching" / "data" / "species_abundance_train.csv"
+    species_matrix = runtime_path("WGS_FMT_DATA_ROOT", "fmt") / "species_abundance_train.csv"
     species_output = REF_DIR / "species_p5_p95_extended.tsv"
 
     if not species_matrix.exists():
@@ -203,7 +204,7 @@ def main():
     # 尝试查找代谢物矩阵
     # 常见位置: data/metabolite_matrix.csv, pipeline/output/metabolite_matrix.tsv
     candidate_paths = [
-        ROOT / "data" / "metabolite_matrix.csv",
+        runtime_path("WGS_DATA_DIR") / "metabolite_matrix.csv",
         WGS_FMT_ROOT / "pipeline" / "metabolite_matrix.tsv",
         WGS_FMT_ROOT / "data" / "metabolite_matrix.csv",
     ]

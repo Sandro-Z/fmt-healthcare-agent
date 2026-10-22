@@ -251,7 +251,10 @@ pathabundance="$HUMANN_DIR/${SAMPLE_ID}_pathabundance.tsv"
 genefamilies="$HUMANN_DIR/${SAMPLE_ID}_genefamilies.tsv"
 if [[ ! -s "$pathabundance" || ! -s "$genefamilies" ]]; then
     log "HUMANN functional profiling"
-    PATH="$FUNC_ENV/bin:$PATH" "$HUMANN" \
+    # HUMAnN 3.9 parses the last nonempty line of `metaphlan --version`.
+    # MetaPhlAn 4.2 appends database information; normalize only that probe.
+    WGS_HUMANN_METAPHLAN_BIN="$METAPHLAN" \
+    PATH="$SCRIPT_ROOT/humann_compat:$FUNC_ENV/bin:$PATH" "$HUMANN" \
         --input "$MERGED_FASTQ" --output "$HUMANN_SAMPLE_DIR" \
         --output-basename "$SAMPLE_ID" --threads "$THREADS" \
         --taxonomic-profile "$HUMANN_TAX_OUT" \

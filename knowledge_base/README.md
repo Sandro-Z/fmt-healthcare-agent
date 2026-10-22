@@ -6,7 +6,6 @@
 
 ```
 knowledge_base/
-├── kb.db                 # SQLite 主数据库（自动生成）
 ├── schema.sql            # 数据库 schema 定义
 │
 ├── standards/            # 国际标准参考数据（原始文件）
@@ -24,33 +23,37 @@ knowledge_base/
 ├── api/                  # 查询 API
 │   └── kb_query.py       # 结构化查询接口
 │
-└── faiss_index/          # FAISS 向量索引（RAG）
 ```
+
+运行数据默认位于项目的 `var/knowledge/`：`kb.db` 为 SQLite 数据库，
+`documents/` 为导入文献，`index/` 为索引预留位置。数据库、查询 API、导入脚本和
+Agent 工具共享同一路径，可用 `WGS_WORKSPACE` 整体迁移，或用 `WGS_KB_SQLITE_PATH`
+单独覆盖数据库地址。新环境所有业务表为空，不自动恢复旧文献。
 
 ## 快速开始
 
 ### 1. 初始化数据库
 
 ```bash
-cd knowledge_base
+# 从项目根目录执行，先安装项目 Python 依赖
 
 # 创建数据库表
-uv run python scripts/init_db.py
+python scripts/init_data.py
 
 # 导入标准参考数据（ICD-11、NCBI taxonomy、益生菌、期刊 IF）
-uv run python scripts/fetch_standards.py
+python knowledge_base/scripts/fetch_standards.py
 ```
 
 ### 2. 导入文献
 
 **方式 A：从 PubMed 自动抓取新文献**
 ```bash
-uv run python scripts/pubmed_pipeline.py 40659786 36058786 33542131
+python knowledge_base/scripts/pubmed_pipeline.py 40659786 36058786 33542131
 ```
 
 **方式 B：回填现有知识库文献**
 ```bash
-uv run python scripts/backfill_existing.py --all
+python knowledge_base/scripts/backfill_existing.py --all
 ```
 
 ### 3. 结构化查询
@@ -102,7 +105,7 @@ taxonomy = kb.get_taxonomy(name="Akkermansia")
 
 | 表名 | 说明 | 记录数 |
 |------|------|--------|
-| `papers` | 文献主表（PMID、DOI、期刊、摘要、疾病、样本等） | 19+ |
+| `papers` | 文献主表（PMID、DOI、期刊、摘要、疾病、样本等） | 0 |
 | `accessions` | 数据集编号（PRJNA/GSE/SRP 等） | - |
 | `key_microbes` | 关键微生物（学名、中文名、丰度变化） | - |
 | `functional_pathways` | 代谢通路（KEGG/MetaCyc） | - |
@@ -114,10 +117,10 @@ taxonomy = kb.get_taxonomy(name="Akkermansia")
 
 | 表名 | 说明 | 记录数 |
 |------|------|--------|
-| `icd11_diseases` | ICD-11 疾病分类（含中文名） | 15 |
-| `ncbi_taxonomy` | NCBI 物种分类（含中文名） | 22 |
-| `probiotics` | ISAPP/FAO 益生菌名录 | 10 |
-| `journal_impact_factors` | JCR 期刊影响因子 (2024) | 19 |
+| `icd11_diseases` | ICD-11 疾病分类（含中文名） | 0 |
+| `ncbi_taxonomy` | NCBI 物种分类（含中文名） | 0 |
+| `probiotics` | ISAPP/FAO 益生菌名录 | 0 |
+| `journal_impact_factors` | JCR 期刊影响因子 (2024) | 0 |
 
 ## 添加新知识条目
 
@@ -125,10 +128,10 @@ taxonomy = kb.get_taxonomy(name="Akkermansia")
 
 ```bash
 # 单篇文献
-uv run python scripts/pubmed_pipeline.py <PMID>
+python knowledge_base/scripts/pubmed_pipeline.py <PMID>
 
 # 批量
-uv run python scripts/pubmed_pipeline.py PMID1 PMID2 PMID3 ...
+python knowledge_base/scripts/pubmed_pipeline.py PMID1 PMID2 PMID3 ...
 ```
 
 ### 标准数据更新
@@ -140,7 +143,7 @@ uv run python scripts/pubmed_pipeline.py PMID1 PMID2 PMID3 ...
 
 ### 补充文献内容
 
-已有文献的 Markdown 文件位于 `documents/papers/[topic]/` 目录。
+文献的 Markdown 文件默认位于 `var/knowledge/documents/papers/[topic]/` 目录。
 运行 `backfill_existing.py --markdown` 可将 Markdown 内容导入 SQLite 的 `study_context` 字段。
 
 ## 开发计划

@@ -2,16 +2,21 @@ from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
+
+from wgs_fmt_platform.paths import PROJECT_ROOT, project_path, workspace_root
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="WGS_", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=PROJECT_ROOT / ".env", env_prefix="WGS_", extra="ignore"
+    )
 
     env: str = "development"
     workspace: Path = Path("./var")
     mproject_bin: str = "mProject"
     mproject_database: Path = Path("./var/databases/human-gut")
-    claim_api_url: str = "http://10.181.8.92:8080"
+    claim_api_url: str = "http://127.0.0.1:8080"
     claim_api_token: str = ""
     claim_api_openapi_path: str = "/openapi.json"
     claim_api_search_path: str = ""
@@ -35,6 +40,8 @@ class Settings(BaseSettings):
     elasticsearch_url: str = "http://127.0.0.1:9200"
     elasticsearch_index: str = "wgs-knowledge"
     elasticsearch_api_key: str = ""
+    elasticsearch_username: str = "elastic"
+    elasticsearch_password_file: Path | None = None
     embedding_dimensions: int = 384
     graph_text_search_path: str = "/api/knowledge-bases/{knowledge_base_id}/claims"
     artifact_root: Path = Path("./var/artifacts")
@@ -42,6 +49,31 @@ class Settings(BaseSettings):
     nextflow_bin: str = "nextflow"
     nextflow_pipeline: Path = Path("./workflows/main.nf")
     model_registry_root: Path = Path("./var/model-registry")
+
+    @model_validator(mode="after")
+    def resolve_runtime_paths(self) -> "Settings":
+        self.workspace = (
+            project_path(self.workspace)
+            if "workspace" in self.model_fields_set
+            else workspace_root()
+        )
+        for name, suffix in {
+            "mproject_database": "databases/human-gut",
+            "artifact_root": "artifacts",
+            "model_registry_root": "model-registry",
+        }.items():
+            value = getattr(self, name)
+            setattr(
+                self,
+                name,
+                project_path(value) if name in self.model_fields_set else self.workspace / suffix,
+            )
+        if "metadata_database_url" not in self.model_fields_set:
+            self.metadata_database_url = f"sqlite:///{self.workspace / 'metadata.db'}"
+        self.nextflow_pipeline = project_path(self.nextflow_pipeline)
+        if self.elasticsearch_password_file is not None:
+            self.elasticsearch_password_file = project_path(self.elasticsearch_password_file)
+        return self
 
 
 @lru_cache

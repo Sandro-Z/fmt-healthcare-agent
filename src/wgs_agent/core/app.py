@@ -9,6 +9,7 @@ import signal
 import time
 from datetime import UTC
 from pathlib import Path
+from wgs_fmt_platform.paths import runtime_path
 from typing import Any
 
 from pydantic import BaseModel
@@ -178,7 +179,7 @@ class CoreApp:
     ) -> int:
         path = events_file(run_id)
         if not path.exists():
-            for candidate in Path("~/.wgs_agent/sessions").expanduser().glob(
+            for candidate in runtime_path("WGS_SESSIONS_DIR", "sessions").glob(
                 f"*/runs/{run_id}/events.jsonl"
             ):
                 path = candidate
@@ -217,7 +218,7 @@ class CoreApp:
             await self._trace.start()
             self._bus.subscribe(self._trace_event_handler)
 
-        policy_file = Path("~/.wgs_agent/policy.toml").expanduser()
+        policy_file = runtime_path("WGS_POLICY_FILE", "policy.toml")
         self._permission_manager = PermissionManager(
             policy_file=policy_file,
             timeout_s=self._config.permission.timeout_s,
@@ -230,7 +231,7 @@ class CoreApp:
 
         self._broadcaster = IpcEventBroadcaster(trace=self._trace)
         self._bus.subscribe(self._broadcaster.handle)
-        sessions_root = Path("~/.wgs_agent/sessions").expanduser()
+        sessions_root = runtime_path("WGS_SESSIONS_DIR", "sessions")
         store = SessionStore(sessions_root)
         assert self._config is not None
         compact_provider = make_provider(

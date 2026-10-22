@@ -6,13 +6,13 @@ import os
 import secrets
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Iterator
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
 from wgs_fmt_platform.config import get_settings
+from wgs_fmt_platform.paths import runtime_path
 
 
 class Base(DeclarativeBase):
@@ -112,8 +112,7 @@ def verify_password(password: str, encoded: str) -> bool:
 
 
 _settings = get_settings()
-_root = Path(__file__).resolve().parents[3]
-_sqlite_file = Path(os.environ.get("WGS_CONVERSATION_DB_FILE", _root / "data" / "wgs_agent.db")).resolve()
+_sqlite_file = runtime_path("WGS_CONVERSATION_DB_FILE", "db", "wgs_agent.db")
 _sqlite_file.parent.mkdir(parents=True, exist_ok=True)
 # WGS_DATABASE_URL may point to MySQL in production. The local, durable SQLite
 # file keeps conversation memory available even when optional MySQL is offline.

@@ -1,41 +1,36 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="${WGS_APP_ROOT:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-cd "$ROOT"
-if [[ -f .env ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
+if [[ ! -x "$WGS_ENV_ROOT/bin/python" || ! -x "$ROOT/apps/workspace-web/node_modules/.bin/next" || ! -f "$ROOT/apps/workspace-web/.next/BUILD_ID" ]]; then
+  echo "Install Python/Web dependencies and build the Web app before starting." >&2
+  exit 2
 fi
+"$WGS_ENV_ROOT/bin/python" - "$ROOT/apps/workspace-web/.next/routes-manifest.json" "$WGS_API_PORT" <<'PY'
+import json
+import sys
 
-DATA_ROOT="${WGS_WORKSPACE:-$ROOT/var}"
-if [[ -n "${WGS_ENV_ROOT:-}" ]]; then
-  ENV_ROOT="$WGS_ENV_ROOT"
-elif [[ -x "${FMT_ROOT:-${WGS_FMT_RESOURCE_ROOT:-$ROOT/var}}/runtime/envs/wgs-fmt-agent-v2/bin/python" ]]; then
-  ENV_ROOT="${FMT_ROOT:-${WGS_FMT_RESOURCE_ROOT:-$ROOT/var}}/runtime/envs/wgs-fmt-agent-v2"
+with open(sys.argv[1], encoding="utf-8") as handle:
+    rewrites = json.load(handle)["rewrites"]
+routes = rewrites if isinstance(rewrites, list) else [route for group in rewrites.values() for route in group]
+expected = f"http://127.0.0.1:{int(sys.argv[2])}/:path*"
+if not any(route.get("source") == "/backend/:path*" and route.get("destination") == expected for route in routes):
+    raise SystemExit("API port differs from the Web build; rebuild the Web app before starting.")
+PY
+umask 077
+"$WGS_ENV_ROOT/bin/python" "$ROOT/scripts/init_data.py"
+
+if [[ "$WGS_ELASTICSEARCH_MANAGED" == true ]]; then
+  manage_elasticsearch start
+  export WGS_ELASTICSEARCH_USERNAME=wgs-platform
+  export WGS_ELASTICSEARCH_PASSWORD_FILE="$DATA_ROOT/elasticsearch/client-password"
+  export WGS_ELASTICSEARCH_API_KEY=""
+  # Create the empty keyword/vector index before serving requests.
+  "$WGS_ENV_ROOT/bin/python" -c 'from wgs_fmt_platform.infrastructure.search import HybridKnowledgeSearch; HybridKnowledgeSearch().ensure_index()'
 else
-  ENV_ROOT="$ROOT/.venv"
+  echo "elasticsearch external: automatic startup disabled"
 fi
-WEB_HOST="${WGS_WEB_HOST:-0.0.0.0}"
-WEB_PORT="${WGS_WEB_PORT:-8502}"
-API_HOST="${WGS_API_HOST:-0.0.0.0}"
-API_PORT="${WGS_API_PORT:-8503}"
-
-[[ -x "$ENV_ROOT/bin/python" ]] || {
-  printf 'Application Python environment missing: %s\n' "$ENV_ROOT" >&2
-  exit 2
-}
-[[ -x "$ROOT/apps/workspace-web/node_modules/.bin/next" ]] || {
-  printf 'Frontend build dependencies missing; run npm ci and npm run build.\n' >&2
-  exit 2
-}
-
-mkdir -p "$DATA_ROOT/logs" "$DATA_ROOT/run" "$DATA_ROOT/results" \
-  "$DATA_ROOT/traces" "$DATA_ROOT/knowledge-index"
 
 start_service() {
   local name="$1"
@@ -51,19 +46,15 @@ start_service() {
   echo "$name started: PID $!"
 }
 
-start_service workspace-api "$ENV_ROOT/bin/python" -m uvicorn app.main:app \
-  --app-dir "$ROOT/apps/workspace-api" --host "$API_HOST" --port "$API_PORT"
+start_service workspace-api "$WGS_ENV_ROOT/bin/python" -m uvicorn app.main:app \
+  --app-dir "$ROOT/apps/workspace-api" --host 127.0.0.1 --port "$WGS_API_PORT"
 start_service workspace-web "$ROOT/apps/workspace-web/node_modules/.bin/next" \
-  start "$ROOT/apps/workspace-web" -p "$WEB_PORT" -H "$WEB_HOST"
-
-if [[ "${WGS_ENABLE_REVERSE_TUNNELS:-false}" == true ]]; then
-  bash "$ROOT/deploy/restore-reverse-tunnels.sh"
-else
-  echo "reverse tunnels disabled (set WGS_ENABLE_REVERSE_TUNNELS=true to enable)"
-fi
+  start "$ROOT/apps/workspace-web" -p "$WGS_WEB_PORT" -H "$WGS_WEB_HOST"
 
 if [[ -n "${DEEPSEEK_API_KEY:-}" || -n "${ANTHROPIC_API_KEY:-}" ]]; then
-  start_service agent-daemon "$ENV_ROOT/bin/wgs-agent" daemon --host 127.0.0.1 --port 7438
+  start_service agent-daemon "$WGS_ENV_ROOT/bin/wgs-agent" daemon --host 127.0.0.1 --port "$WGS_PORT"
 else
   echo "agent-daemon skipped: configure DEEPSEEK_API_KEY or ANTHROPIC_API_KEY"
 fi
+
+echo "Workspace URL: http://<server-ip>:$WGS_WEB_PORT/"

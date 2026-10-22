@@ -4,7 +4,9 @@
 
 WGS.FMT 宏基因组分析流水线将原始 FASTQ 测序数据逐步处理为物种丰度、代谢通路、代谢物和药物交互矩阵。
 
-基本输出路径: `/storage1/zhangrongpeng/fmt-data/wgs_out`
+以下相对路径以项目根目录为基准；参考数据库与外部工具需另行安装。
+
+基本输出路径: `var/bioinformatics/legacy`
 
 ---
 
@@ -40,7 +42,7 @@ WGS.FMT 宏基因组分析流水线将原始 FASTQ 测序数据逐步处理为�
 - `{sample_id}.kneaddata.log`
 
 **关键参数**:
-- 数据库: `/storage1/zhangrongpeng/database/kneaddata/hg_39`
+- 数据库: `var/databases/kneaddata/hg_39`
 - 线程数: 16
 
 **检测方法**: 检查 `01_knead/{sample_id}_paired_1.fastq` 是否存在
@@ -50,7 +52,7 @@ WGS.FMT 宏基因组分析流水线将原始 FASTQ 测序数据逐步处理为�
 bash bin/02_qc_preprocess.sh \
     -i samples/{sample_id} \
     -o 01_knead \
-    -d /storage1/zhangrongpeng/database/kneaddata/hg_39 \
+    -d var/databases/kneaddata/hg_39 \
     -t 16 -p 1 -s <(echo {sample_id})
 ```
 
@@ -69,7 +71,7 @@ bash bin/02_qc_preprocess.sh \
 - `{sample_id}_profile.tsv`  — MetaPhlAn 物种丰度表
 
 **关键参数**:
-- 数据库: `/storage1/zhangrongpeng/database/metaphlan4`
+- 数据库: `var/databases/metaphlan4`
 - 索引: `mpa_vJan25_CHOCOPhlAnSGB_202503`
 
 **检测方法**: 检查 `02_classify/{sample_id}_profile.tsv` 是否存在
@@ -79,7 +81,7 @@ bash bin/02_qc_preprocess.sh \
 bash bin/03_metaphlan.sh \
     -i 01_knead \
     -o 02_classify \
-    -d /storage1/zhangrongpeng/database/metaphlan4 \
+    -d var/databases/metaphlan4 \
     -x mpa_vJan25_CHOCOPhlAnSGB_202503 \
     -t 16 -p 1 --save-bowtie2 -s <(echo {sample_id})
 ```
@@ -100,8 +102,8 @@ bash bin/03_metaphlan.sh \
 - `{sample_id}_genefamilies.tsv` — 基因家族丰度
 
 **关键参数**:
-- 蛋白库: `/storage1/zhangrongpeng/database/humann3`
-- MetaPhlAn 数据库: `/storage1/zhangrongpeng/database/metaphlan4`
+- 蛋白库: `var/databases/humann3`
+- MetaPhlAn 数据库: `var/databases/metaphlan4`
 - 线程数: 16
 
 **检测方法**: 检查 `02_classify/humann/{sample_id}_pathabundance.tsv` 是否存在
@@ -111,8 +113,8 @@ bash bin/03_metaphlan.sh \
 bash bin/04_humann.sh \
     -i 01_knead \
     -o 02_classify/humann \
-    -m /storage1/zhangrongpeng/database/metaphlan4 \
-    -P /storage1/zhangrongpeng/database/humann3 \
+    -m var/databases/metaphlan4 \
+    -P var/databases/humann3 \
     -t 16 -p 1 -s <(echo {sample_id})
 ```
 
@@ -140,8 +142,8 @@ bash bin/04_humann.sh \
 python << 'EOF'
 # 重新生成通路矩阵（增量：扫描所有 HUMAnN 输出，重建矩阵）
 import os, glob, re, pandas as pd
-humann_dir = "/storage1/zhangrongpeng/fmt-data/wgs_out/02_classify/humann"
-output_dir = "/storage1/zhangrongpeng/fmt-data/wgs_out/04_pathway"
+humann_dir = "var/bioinformatics/legacy/02_classify/humann"
+output_dir = "var/bioinformatics/legacy/04_pathway"
 # ... 见 run_direct_step.sh 的 run_step5 函数
 EOF
 ```

@@ -4,10 +4,11 @@
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from wgs_fmt_platform.paths import knowledge_db_path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "schema.sql"
-DB_PATH = ROOT / "kb.db"
+DB_PATH = knowledge_db_path()
 
 
 def init_database(db_path: Path = DB_PATH, schema_path: Path = SCHEMA_PATH) -> sqlite3.Connection:

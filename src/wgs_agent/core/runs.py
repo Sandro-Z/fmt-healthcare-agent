@@ -3,8 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from wgs_fmt_platform.paths import runtime_path
 
-RUNS_DIR = Path("runs")
+RUNS_DIR = runtime_path("WGS_RUNS_DIR", "runs")
 
 
 # 返回指定 run_id 对应的目录路径

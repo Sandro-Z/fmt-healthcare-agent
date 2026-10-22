@@ -20,10 +20,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, BinaryIO
 
+from wgs_fmt_platform.paths import PROJECT_ROOT, bioinformatics_root, project_path, runtime_path, workspace_root
+
 
 _SAMPLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
 _FASTQ_SUFFIXES = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _utc_now() -> str:
@@ -41,22 +42,13 @@ class UploadWorkflowSettings:
 
     @classmethod
     def from_env(cls) -> "UploadWorkflowSettings":
-        workspace = Path(os.environ.get("WGS_WORKSPACE", "./data")).expanduser().resolve()
-        platform_root = workspace.parent
+        workspace = workspace_root()
         return cls(
             workspace=workspace,
-            upload_root=Path(os.environ.get("WGS_UPLOAD_ROOT", workspace / "uploads")),
-            job_root=Path(os.environ.get("WGS_UPLOAD_JOB_ROOT", workspace / "upload-jobs")),
-            output_root=Path(
-                os.environ.get("WGS_BIOINFORMATICS_OUTPUT_ROOT", platform_root / "postfmt_processed")
-            ),
-            worker=Path(
-                os.environ.get(
-                    "WGS_BIOINFORMATICS_WORKER",
-                    _PROJECT_ROOT
-                    / "runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh",
-                )
-            ),
+            upload_root=runtime_path("WGS_UPLOAD_ROOT", "uploads"),
+            job_root=runtime_path("WGS_UPLOAD_JOB_ROOT", "upload-jobs"),
+            output_root=bioinformatics_root(),
+            worker=project_path(os.environ.get("WGS_BIOINFORMATICS_WORKER") or PROJECT_ROOT / "runtime/scripts/postfmt_pipeline/process_postfmt_sample.sh"),
             threads=max(1, int(os.environ.get("WGS_UPLOAD_THREADS", "4"))),
         )
 
@@ -236,14 +228,39 @@ def submit_uploaded_sample(
     return get_workflow_status(sample_id, settings=settings)
 
 
+def list_uploaded_workflows(
+    *, settings: UploadWorkflowSettings | None = None
+) -> dict[str, dict[str, Any]]:
+    """Include uploads in the sample index before analysis results exist."""
+    settings = settings or UploadWorkflowSettings.from_env()
+    jobs_dir = settings.job_root / "jobs"
+    try:
+        paths = list(jobs_dir.glob("*.json"))
+    except OSError:
+        return {}
+    workflows: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        try:
+            sample_id = validate_sample_id(path.stem)
+            status = get_workflow_status(sample_id, settings=settings, include_log=False)
+        except (OSError, ValueError):
+            continue
+        if status["state"] != "not_submitted":
+            workflows[sample_id] = status
+    return workflows
+
+
 def get_workflow_status(
-    sample_id: str, *, settings: UploadWorkflowSettings | None = None
+    sample_id: str, *, settings: UploadWorkflowSettings | None = None,
+    include_log: bool = True,
 ) -> dict[str, Any]:
     settings = settings or UploadWorkflowSettings.from_env()
     sample_id = validate_sample_id(sample_id)
     job_path = settings.job_root / "jobs" / f"{sample_id}.json"
     try:
         job = json.loads(job_path.read_text(encoding="utf-8"))
+        if not isinstance(job, dict):
+            raise ValueError("Invalid upload job record")
     except (OSError, ValueError):
         job = {"sample_id": sample_id, "state": "not_submitted", "pid": None}
 
@@ -275,8 +292,9 @@ def get_workflow_status(
         progress = 100
     pipeline_log = output / "logs" / f"{sample_id}.log"
     log_tail = ""
-    try:
-        log_tail = "\n".join(pipeline_log.read_text(encoding="utf-8", errors="replace").splitlines()[-30:])
-    except OSError:
-        pass
+    if include_log:
+        try:
+            log_tail = "\n".join(pipeline_log.read_text(encoding="utf-8", errors="replace").splitlines()[-30:])
+        except OSError:
+            pass
     return {**job, "state": state, "progress": progress, "artifacts": artifacts, "log_tail": log_tail}

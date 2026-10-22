@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="${WGS_APP_ROOT:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
-if [[ -f "$ROOT/.env" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "$ROOT/.env"
-  set +a
-fi
-DATA_ROOT="${WGS_WORKSPACE:-$ROOT/var}"
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 for name in workspace-api workspace-web agent-daemon; do
   pid_file="$DATA_ROOT/run/$name.pid"
@@ -19,3 +11,5 @@ for name in workspace-api workspace-web agent-daemon; do
     echo "$name stopped"
   fi
 done
+
+manage_elasticsearch status

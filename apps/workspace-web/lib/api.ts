@@ -31,10 +31,14 @@ export interface WorkspaceSettings {
   canvas_enabled:boolean;canvas_agent_access:boolean;canvas_max_file_mb:number;
 }
 export interface ArtifactInfo { exists: boolean; bytes: number; updated_at?: string | null }
+export interface WorkflowSummary {
+  state: string; progress: number; submitted_at?: string | null; artifacts: Record<string, boolean>;
+}
 export interface SampleSummary {
   sample_id: string; status: string; updated_at?: string | null; species_total: number;
   species_high: number; species_low: number; enterotype: string; pathway_total: number;
   artifacts: Record<string, ArtifactInfo>;
+  workflow?: WorkflowSummary | null;
 }
 export interface SampleList { count: number; filtered_count: number; status_counts: Record<string, number>; samples: SampleSummary[] }
 export interface SampleDetail { summary: SampleSummary; analysis: Record<string, any> }
@@ -111,7 +115,7 @@ export const api = {
   sandboxFiles: (id:string) => request<{conversation_id:string;count:number;files:CanvasItem[]}>(`/conversations/${encodeURIComponent(id)}/sandbox/files`),
   createConversation: (agentId:string) => request<Conversation>("/backend/conversations",{method:"POST",body:JSON.stringify({agent_id:agentId,title:"新对话"})}),
   deleteConversation: (id:string) => request(`/backend/conversations/${encodeURIComponent(id)}`,{method:"DELETE"}),
-  samples: (q="") => request<SampleList>(`/samples?q=${encodeURIComponent(q)}`),
+  samples: (q="") => request<SampleList>(`/samples?q=${encodeURIComponent(q)}`,{cache:"no-store"}),
   uploadSample: (value:{sampleId:string;layout:"single"|"paired";read1:File;read2?:File|null}) => {
     const form=new FormData(); form.set("sample_id",value.sampleId); form.set("layout",value.layout); form.set("read1",value.read1);
     if(value.read2)form.set("read2",value.read2);
@@ -120,7 +124,7 @@ export const api = {
   sampleWorkflow: (id:string) => request<Record<string,any>>(`/samples/${encodeURIComponent(id)}/workflow`),
   sample: (id:string) => request<SampleDetail>(`/samples/${encodeURIComponent(id)}`),
   reports: (q="") => request<ReportList>(`/reports?q=${encodeURIComponent(q)}`),
-  generateReport: (id:string) => request<{status:string;sample_id:string;artifacts:Record<string,ArtifactInfo>}>(`/reports/${encodeURIComponent(id)}/generate`, {method:"POST",body:JSON.stringify({confirmed:true})}),
+  generateReport: (id:string) => request<{status:string;sample_id:string;artifacts:Record<string,ArtifactInfo>;llm_status?:string;llm_accepted_topics?:number}>(`/reports/${encodeURIComponent(id)}/generate`, {method:"POST",body:JSON.stringify({confirmed:true})}),
   knowledgeStats: () => request<KnowledgeStats>("/knowledge/stats"),
   papers: (params:Record<string,string|number|boolean|undefined>) => {
     const query=new URLSearchParams(); Object.entries(params).forEach(([key,value])=>{if(value!==undefined&&value!=="")query.set(key,String(value))});

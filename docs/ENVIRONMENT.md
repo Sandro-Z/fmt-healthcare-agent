@@ -1,6 +1,7 @@
 # 正式运行环境
 
-本项目由 Python 3.12 后端、Next.js 前端和可选的 MySQL、Redis、Elasticsearch、LitKG 服务组成。
+本项目由 Python 3.12 后端、Next.js 前端、默认随项目启动的 Elasticsearch Docker 实例，
+以及可选的 MySQL、Redis、LitKG 服务组成。ES 可关闭自动托管并使用已有实例。
 依赖版本由根目录 `environment.yml`、`uv.lock` 和 `apps/workspace-web/package-lock.json`
 共同管理；密钥及服务器路径使用 `.env` 管理，但 `.env` 不进入 Git。
 
@@ -71,13 +72,15 @@ chmod 600 .env
 
 - MySQL 8：用户、会话和业务数据；
 - Redis 7：短期/长期记忆缓存；
-- Elasticsearch 8：关键词、向量和融合检索；
+- Elasticsearch 8：关键词、向量和融合检索，`deploy/start.sh` 默认通过本机 Docker 启动；
 - LitKG Claim API：Claim 和关系知识检索；
 - mProject：宏基因组样本处理；
 - Nextflow：需要工作流编排时启用；
 - TeX Live/XeLaTeX：高质量 PDF 报告，可选。
 
 这些服务不应把口令直接写入仓库。生产环境还应限制其监听地址并配置访问控制。
+托管 ES 自动生成私有密码文件，仅发布回环端口。启动前需准备可访问的本机 Docker；
+参数及数据卷备份方式见 [单服务器架构](SINGLE_SERVER.md#elasticsearch-随项目启动)。
 
 ## 4. 启动与验证
 

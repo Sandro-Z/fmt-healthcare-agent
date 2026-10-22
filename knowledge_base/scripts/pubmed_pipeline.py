@@ -18,9 +18,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
+from wgs_fmt_platform.paths import knowledge_db_path
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "kb.db"
+DB_PATH = knowledge_db_path()
 
 # PubMed API 配置
 PUBMED_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"

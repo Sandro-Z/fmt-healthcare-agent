@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from wgs_agent.core.tools.base import BaseTool, ToolResult
+from wgs_fmt_platform.paths import knowledge_db_path, runtime_path
 
 
 class KnowledgeSearchParams(BaseModel):
@@ -56,11 +57,7 @@ class KnowledgeSearchTool(BaseTool):
 
             # 2. 使用原 SQLite 结构化搜索
             kb_dir = _get_kb_dir()
-            db_path = os.environ.get("WGS_KB_SQLITE_PATH", "")
-            if not db_path:
-                db_path = os.path.join(kb_dir, "kb.db")
-                if not os.path.isfile(db_path):
-                    db_path = os.path.join(os.path.dirname(kb_dir), "kb.db")
+            db_path = str(knowledge_db_path())
 
             if os.path.isfile(db_path):
                 try:
@@ -297,18 +294,7 @@ KNOWLEDGE_TOOL_POLICIES: dict[str, dict[str, object]] = {
 
 def _get_kb_dir() -> str:
     """获取知识库目录"""
-    kb_dir = os.environ.get("WGS_KB_DIR", "")
-    if kb_dir and os.path.isdir(kb_dir):
-        return kb_dir
-    candidates = [
-        os.path.join(os.path.dirname(__file__), "..", "..", "..", "knowledge_base"),
-        os.path.join(os.getcwd(), "knowledge_base"),
-    ]
-    for c in candidates:
-        c = os.path.abspath(c)
-        if os.path.isdir(c):
-            return c
-    return os.path.join(os.getcwd(), "knowledge_base")
+    return str(runtime_path("WGS_KB_DIR", "knowledge", "documents"))
 
 
 async def search_claim_references(query: str, max_results: int = 10) -> list[dict[str, Any]]:

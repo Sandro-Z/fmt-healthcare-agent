@@ -10,18 +10,16 @@ from datetime import datetime
 from typing import Tuple, List, Dict
 
 from fpdf import FPDF
+from wgs_fmt_platform.paths import legacy_output_root, project_path, runtime_path
 
 # ============================================================================
 # 路径配置
 # ============================================================================
-_AGENT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-_CONFIGURED_DATA_DIR = os.environ.get("WGS_DATA_DIR", os.path.join(_AGENT_ROOT, "data"))
-BASE_DIR = os.environ.get(
-    "WGS_LEGACY_PIPELINE_OUTPUT_DIR", "/storage1/zhangrongpeng/fmt-data/wgs_out"
-)
-DATA_DIR = os.environ.get("WGS_LEGACY_DATA_DIR", _CONFIGURED_DATA_DIR)
-OUTPUT_DIR = os.environ.get("WGS_RESULTS_DIR", os.path.join(_AGENT_ROOT, "data", "results"))
-MODEL_DIR = os.environ.get("WGS_LEGACY_MODEL_DIR", os.path.join(_AGENT_ROOT, "model", "Qwen3-0.6B"))
+BASE_DIR = str(legacy_output_root())
+_REFERENCE_DIR = runtime_path("WGS_REFERENCE_DIR", "reference")
+DATA_DIR = str(project_path(os.environ.get("WGS_LEGACY_DATA_DIR") or os.environ.get("WGS_DATA_DIR") or _REFERENCE_DIR))
+OUTPUT_DIR = str(runtime_path("WGS_RESULTS_DIR", "results"))
+MODEL_DIR = str(runtime_path("WGS_LEGACY_MODEL_DIR", "models", "Qwen3-0.6B"))
 
 # 物种/通路/代谢物/药物数据矩阵
 METAPHLAN_SPECIES_FILE = os.path.join(BASE_DIR, "05_matrix", "relative_abundance_species.tsv")
@@ -37,10 +35,7 @@ DRUG_ANALYSIS_FILE = os.path.join(DRUG_ANALYSIS_DIR, "drug_analysis_report_{samp
 METABOLITE_DRUG_FILE = os.path.join(DRUG_ANALYSIS_DIR, "metabolite_drug_links.tsv")
 METHOD_COMPARISON_FILE = os.path.join(DRUG_ANALYSIS_DIR, "method_comparison_summary.tsv")
 SPECIES_REF_FILE = os.path.join(DATA_DIR, "species_matrix_P5_P95.csv")
-SPECIES_REF_EXTENDED = os.environ.get(
-    "WGS_SPECIES_REFERENCE_FILE",
-    os.path.join(_CONFIGURED_DATA_DIR, "reference", "species_reference_overall.csv"),
-)
+SPECIES_REF_EXTENDED = str(project_path(os.environ.get("WGS_SPECIES_REFERENCE_FILE") or _REFERENCE_DIR / "species_reference_overall.csv"))
 SPECIES_STATS_FILE = os.path.join(DATA_DIR, "health_species_stats.csv")
 GENUS_STATS_FILE = os.path.join(DATA_DIR, "health_genus_stats.csv")
 PHENOTYPE_FILE = os.path.join(DATA_DIR, "phenotype_species_stats.csv")

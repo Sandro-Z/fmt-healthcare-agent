@@ -11,6 +11,8 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
+from wgs_fmt_platform.paths import bioinformatics_root
+
 from wgs_agent.pipeline.report_common import (
     METAPHLAN_SPECIES_FILE, METAPHLAN_GENUS_FILE,
     PATHWAY_KNOWN_FILE, PATHWAY_CONTRIB_FILE, PATHWAY_COMBINED_FILE,
@@ -24,11 +26,13 @@ from wgs_agent.pipeline.report_common import (
 
 
 def _bioinformatics_output_root() -> Path:
-    configured = os.environ.get("WGS_BIOINFORMATICS_OUTPUT_ROOT", "").strip()
-    if configured:
-        return Path(configured)
-    workspace = Path(os.environ.get("WGS_WORKSPACE", "./data")).expanduser().resolve()
-    return workspace.parent / "postfmt_processed"
+    return bioinformatics_root()
+
+
+def _finite_nonnegative_profile(values: pd.Series) -> pd.Series:
+    """Keep reported zeros; missing or invalid values are not zero measurements."""
+    numeric = pd.to_numeric(values, errors="coerce")
+    return numeric[numeric.notna() & np.isfinite(numeric) & (numeric >= 0)].sort_values(ascending=False)
 
 
 def _load_single_metaphlan(sample_id: str, rank: str) -> Optional[pd.Series]:
@@ -70,7 +74,7 @@ def _load_single_humann_pathways(sample_id: str) -> Optional[pd.Series]:
         # Unstratified rows describe the total pathway abundance; species
         # contributions remain available in the original HUMAnN artifact.
         values = values[~values.index.astype(str).str.contains("|", regex=False)]
-        return values[values > 0].sort_values(ascending=False)
+        return _finite_nonnegative_profile(values)
     except (OSError, ValueError, IndexError):
         return None
 
@@ -296,7 +300,7 @@ def load_pathway_data(sample_id: str) -> Tuple[pd.Series, Optional[pd.DataFrame]
         pw = _read_tsv_index(PATHWAY_KNOWN_FILE)
         best = _best_col(pw, sample_id, warn=False) if pw is not None else None
         if best is not None:
-            path_data = pw[best][pw[best] > 0].sort_values(ascending=False)
+            path_data = _finite_nonnegative_profile(pw[best])
             contrib = _read_tsv_index(PATHWAY_CONTRIB_FILE)
             print(f'       通路数: {len(path_data)}（列: {best}）')
             return path_data, contrib
@@ -311,7 +315,7 @@ def load_pathway_data(sample_id: str) -> Tuple[pd.Series, Optional[pd.DataFrame]
     try:
         contrib = _read_tsv_index(PATHWAY_CONTRIB_FILE)
         best = _best_col(contrib, sample_id)
-        path_data = contrib[best][contrib[best] > 0].sort_values(ascending=False)
+        path_data = _finite_nonnegative_profile(contrib[best])
         print(f'       通路数: {len(path_data)}（贡献文件列: {best}）')
         return path_data, contrib
     except:
@@ -329,7 +333,7 @@ def load_metabolite_data(sample_id: str) -> Tuple[pd.Series, Optional[pd.DataFra
         return None, None, None
 
     col = _best_col(met, sample_id, warn=True)
-    met_values = met[col][met[col] > 0].sort_values(ascending=False)
+    met_values = _finite_nonnegative_profile(met[col])
     print(f'       代谢物数: {len(met_values)}（列: {col}）')
 
     summary = _read_tsv(METABOLITE_SUMMARY_FILE)

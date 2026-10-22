@@ -11,9 +11,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
+from wgs_fmt_platform.paths import knowledge_db_path
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "kb.db"
+DB_PATH = knowledge_db_path()
 
 
 # ===================== ICD-11 疾病分类 =====================
