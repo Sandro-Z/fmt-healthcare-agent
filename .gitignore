@@ -45,3 +45,4 @@ knowledge_base/documents/papers/
 src/wgs_agent/tools/fonts/*.TTC
 
 tmp/
+fmt-databases/
