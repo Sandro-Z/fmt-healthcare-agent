@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.agent_chat import TOOLS, _atomic_text_write, _audit, _sandbox_canvas_item, _sandbox_dir, execute_confirmed_action, run_agent_turn
-from wgs_agent.pipeline.upload_workflow import get_workflow_status, submit_uploaded_sample
+from wgs_agent.pipeline.upload_workflow import get_workflow_status, list_uploaded_workflows, submit_uploaded_sample
 from app.local_chat import LocalChatError, list_models
 from wgs_agent.tools.knowledge_tools import claim_record_to_reference
 from wgs_fmt_platform.config import get_settings
@@ -716,18 +716,26 @@ def _sample_artifacts(sample_id: str) -> dict[str, dict[str, Any]]:
     }
 
 
-def _sample_summary(sample_id: str, runner_state: str = "") -> dict[str, Any]:
+def _sample_summary(
+    sample_id: str, runner_state: str = "", workflow: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     analysis_path = RESULTS_DIR / f"{sample_id}_analysis.json"
     analysis = _json_object(analysis_path)
     species = analysis.get("species") if isinstance(analysis.get("species"), dict) else {}
     enterotype = analysis.get("enterotype") if isinstance(analysis.get("enterotype"), dict) else {}
     pathways = analysis.get("pathways") if isinstance(analysis.get("pathways"), dict) else {}
     reports = _sample_artifacts(sample_id)
-    state = runner_state or ("analyzed" if reports["analysis"]["exists"] else "known")
+    state = (workflow or {}).get("state") or runner_state or ("analyzed" if reports["analysis"]["exists"] else "known")
     return {
         "sample_id": sample_id,
         "status": state,
-        "updated_at": reports["analysis"]["updated_at"] or reports["pdf"]["updated_at"],
+        "updated_at": reports["analysis"]["updated_at"] or reports["pdf"]["updated_at"] or (workflow or {}).get("submitted_at"),
+        "workflow": {
+            "state": workflow["state"],
+            "progress": workflow["progress"],
+            "submitted_at": workflow.get("submitted_at"),
+            "artifacts": workflow["artifacts"],
+        } if workflow else None,
         "species_total": species.get("n_total", 0),
         "species_high": species.get("n_high", 0),
         "species_low": species.get("n_low", 0),
@@ -740,7 +748,8 @@ def _sample_summary(sample_id: str, runner_state: str = "") -> dict[str, Any]:
 @app.get("/api/samples")
 def samples(q: str = "", limit: int = Query(default=200, ge=1, le=500)) -> dict[str, Any]:
     states = _runner_states()
-    sample_ids = set(states)
+    workflows = list_uploaded_workflows()
+    sample_ids = set(states) | set(workflows)
     if RESULTS_DIR.is_dir():
         suffixes = ("_analysis.json", "_knowledge.json", "_health_report.md", "_health_report.pdf", "_fmt_tsne.png")
         for path in RESULTS_DIR.iterdir():
@@ -750,7 +759,7 @@ def samples(q: str = "", limit: int = Query(default=200, ge=1, le=500)) -> dict[
                     break
     needle = q.strip().lower()
     ordered = sorted(sid for sid in sample_ids if not needle or needle in sid.lower())[:limit]
-    items = [_sample_summary(sid, states.get(sid, "")) for sid in ordered]
+    items = [_sample_summary(sid, states.get(sid, ""), workflows.get(sid)) for sid in ordered]
     counts: dict[str, int] = {}
     for item in items:
         state = str(item["status"]).lower()

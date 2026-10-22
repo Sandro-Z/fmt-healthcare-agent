@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Keep HUMAnN 3.9's version probe compatible with MetaPhlAn 4.2.
+# All analysis arguments are forwarded unchanged to the real executable.
+set -euo pipefail
+
+: "${WGS_HUMANN_METAPHLAN_BIN:?Set the absolute path to the real MetaPhlAn executable}"
+if [[ $# -eq 1 && ( "${1:-}" == --version || "${1:-}" == -v ) ]]; then
+    code=0
+    output="$("$WGS_HUMANN_METAPHLAN_BIN" "$@" 2>&1)" || code=$?
+    if (( code != 0 )); then
+        printf '%s\n' "$output" >&2
+        exit "$code"
+    fi
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^MetaPhlAn\ version\ [0-9] ]]; then
+            printf '%s\n' "$line"
+            exit 0
+        fi
+    done <<< "$output"
+    printf 'MetaPhlAn version line missing:\n%s\n' "$output" >&2
+    exit 1
+fi
+
+exec "$WGS_HUMANN_METAPHLAN_BIN" "$@"

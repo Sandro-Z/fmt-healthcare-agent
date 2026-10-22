@@ -228,14 +228,39 @@ def submit_uploaded_sample(
     return get_workflow_status(sample_id, settings=settings)
 
 
+def list_uploaded_workflows(
+    *, settings: UploadWorkflowSettings | None = None
+) -> dict[str, dict[str, Any]]:
+    """Include uploads in the sample index before analysis results exist."""
+    settings = settings or UploadWorkflowSettings.from_env()
+    jobs_dir = settings.job_root / "jobs"
+    try:
+        paths = list(jobs_dir.glob("*.json"))
+    except OSError:
+        return {}
+    workflows: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        try:
+            sample_id = validate_sample_id(path.stem)
+            status = get_workflow_status(sample_id, settings=settings, include_log=False)
+        except (OSError, ValueError):
+            continue
+        if status["state"] != "not_submitted":
+            workflows[sample_id] = status
+    return workflows
+
+
 def get_workflow_status(
-    sample_id: str, *, settings: UploadWorkflowSettings | None = None
+    sample_id: str, *, settings: UploadWorkflowSettings | None = None,
+    include_log: bool = True,
 ) -> dict[str, Any]:
     settings = settings or UploadWorkflowSettings.from_env()
     sample_id = validate_sample_id(sample_id)
     job_path = settings.job_root / "jobs" / f"{sample_id}.json"
     try:
         job = json.loads(job_path.read_text(encoding="utf-8"))
+        if not isinstance(job, dict):
+            raise ValueError("Invalid upload job record")
     except (OSError, ValueError):
         job = {"sample_id": sample_id, "state": "not_submitted", "pid": None}
 
@@ -267,8 +292,9 @@ def get_workflow_status(
         progress = 100
     pipeline_log = output / "logs" / f"{sample_id}.log"
     log_tail = ""
-    try:
-        log_tail = "\n".join(pipeline_log.read_text(encoding="utf-8", errors="replace").splitlines()[-30:])
-    except OSError:
-        pass
+    if include_log:
+        try:
+            log_tail = "\n".join(pipeline_log.read_text(encoding="utf-8", errors="replace").splitlines()[-30:])
+        except OSError:
+            pass
     return {**job, "state": state, "progress": progress, "artifacts": artifacts, "log_tail": log_tail}
